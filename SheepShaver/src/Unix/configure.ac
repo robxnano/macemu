@@ -40,11 +40,11 @@ AC_ARG_WITH(esd,            [  --with-esd              support ESD for sound und
 AC_ARG_WITH(gtk,            [  --with-gtk              use GTK user interface [default=yes]],
   [case "$withval" in
    gtk1)      WANT_GTK="gtk";;
-   gtk|gtk2)  WANT_GTK="$withval";;
-   yes)       WANT_GTK="gtk2 gtk";;
+   gtk|gtk2|gtk3)  WANT_GTK="$withval";;
+   yes)       WANT_GTK="gtk3 gtk2 gtk";;
    *)         WANT_GTK="no";;
    esac],
-  [WANT_GTK="gtk2 gtk"])
+  [WANT_GTK="gtk3 gtk2 gtk"])
 AC_ARG_WITH(mon,            [  --with-mon              use mon as debugger [default=yes]], [WANT_MON=$withval], [WANT_MON=no])
 AC_ARG_WITH(dgcc,           [  --with-dgcc=COMPILER    use C++ COMPILER to compile synthetic opcodes or 'precompiled'], [DYNGEN_CC=$withval])
 
@@ -337,16 +337,16 @@ fi
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
 case "x$WANT_GTK" in
-xgtk2*)
+xgtk3*)
   WANT_GTK=no
-  AM_PATH_GTK_2_0(1.3.15, [
+  AM_PATH_GTK_3_0(3.0.0, [
     GUI_CFLAGS="$GTK_CFLAGS"
     GUI_LIBS="$GTK_LIBS"
-    WANT_GTK=gtk2
+    WANT_GTK=gtk3
   ], [
     case "x${WANT_GTK}x" in
     *gtkx)
-      AC_MSG_WARN([Could not find GTK+ 2.0, trying with GTK+ 1.2.])
+      AC_MSG_WARN([Could not find GTK+ 3.0, trying with GTK+ 1.2.])
       WANT_GTK=gtk
       ;;
     *)

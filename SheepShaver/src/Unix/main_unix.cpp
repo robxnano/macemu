@@ -732,8 +732,31 @@ static bool init_sdl()
 }
 #endif
 
+static void
+on_activate (GtkApplication *app)
+{
+	GtkWindow *window;
+
+	/* It's good practice to check your parameters at the beginning of the
+	 * function. It helps catch errors early and in development instead of
+	 * by your users.
+	 */
+	g_assert (GTK_IS_APPLICATION (app));
+
+	/* Get the current window or create one if necessary. */
+	window = gtk_application_get_active_window (app);
+
+	/* Ask the window manager/compositor to present the window. */
+    if (window != NULL)
+    	gtk_window_present (window);
+}
+
 int main(int argc, char **argv)
 {
+#ifdef ENABLE_GTK
+	g_autoptr(GtkApplication) app = NULL;
+	int ret;
+#endif
 #if defined(ENABLE_GTK) && !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 	XInitThreads();
 #endif
@@ -843,8 +866,10 @@ int main(int argc, char **argv)
 #ifdef ENABLE_GTK
 	if (!gui_connection) {
 		// Init GTK
-		gtk_set_locale();
+		app = gtk_application_new ("net.cebix.SheepShaver", G_APPLICATION_FLAGS_NONE);
 		gtk_init(&argc, &argv);
+	    ret = g_application_run (G_APPLICATION (app), argc, argv);
+	    g_application_register(G_APPLICATION (app), NULL, NULL);
 	}
 #endif
 
@@ -2276,12 +2301,13 @@ void SheepMem::Exit(void)
  */
 
 #ifdef ENABLE_GTK
-static void dl_destroyed(void)
+static GCallback dl_destroyed(void)
 {
 	gtk_main_quit();
+	return nullptr;
 }
 
-static void dl_quit(GtkWidget *dialog)
+static void dl_quit(GtkWidget *button, GtkWidget *dialog)
 {
 	gtk_widget_destroy(dialog);
 }
@@ -2293,19 +2319,19 @@ void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 
 	GtkWidget *dialog = gtk_dialog_new();
 	gtk_window_set_title(GTK_WINDOW(dialog), GetString(title_id));
-	gtk_container_border_width(GTK_CONTAINER(dialog), 5);
-	gtk_widget_set_uposition(GTK_WIDGET(dialog), 100, 150);
-	gtk_signal_connect(GTK_OBJECT(dialog), "destroy", GTK_SIGNAL_FUNC(dl_destroyed), NULL);
+	gtk_container_set_border_width(GTK_CONTAINER(dialog), 5);
+	//gtk_window_set_position(GTK_WINDOW(dialog), 100, 150);
+	g_signal_connect(GTK_DIALOG(dialog), "destroy", dl_destroyed(), NULL);
 
 	GtkWidget *label = gtk_label_new(str);
 	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), label, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), label, TRUE, TRUE, 0);
 
 	GtkWidget *button = gtk_button_new_with_label(GetString(button_id));
 	gtk_widget_show(button);
-	gtk_signal_connect_object(GTK_OBJECT(button), "clicked", GTK_SIGNAL_FUNC(dl_quit), GTK_OBJECT(dialog));
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->action_area), button, FALSE, FALSE, 0);
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	g_signal_connect(GTK_WIDGET(button), "clicked", G_CALLBACK(dl_quit), GTK_DIALOG(dialog));
+	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(dialog))), button, FALSE, FALSE, 0);
+	gtk_widget_set_receives_default(button, true);
 	gtk_widget_grab_default(button);
 	gtk_widget_show(dialog);
 
