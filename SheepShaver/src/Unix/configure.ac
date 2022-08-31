@@ -39,12 +39,11 @@ AC_ARG_ENABLE(standalone-gui,[  --enable-standalone-gui enable a standalone GUI 
 AC_ARG_WITH(esd,            [  --with-esd              support ESD for sound under Linux/FreeBSD [default=yes]], [WANT_ESD=$withval], [WANT_ESD=yes])
 AC_ARG_WITH(gtk,            [  --with-gtk              use GTK user interface [default=yes]],
   [case "$withval" in
-   gtk1)      WANT_GTK="gtk";;
-   gtk|gtk2|gtk3)  WANT_GTK="$withval";;
-   yes)       WANT_GTK="gtk3 gtk2 gtk";;
+   gtk3)  WANT_GTK="gtk3";;
+   yes)       WANT_GTK="gtk3";;
    *)         WANT_GTK="no";;
    esac],
-  [WANT_GTK="gtk3 gtk2 gtk"])
+  [WANT_GTK="gtk3"])
 AC_ARG_WITH(mon,            [  --with-mon              use mon as debugger [default=yes]], [WANT_MON=$withval], [WANT_MON=no])
 AC_ARG_WITH(dgcc,           [  --with-dgcc=COMPILER    use C++ COMPILER to compile synthetic opcodes or 'precompiled'], [DYNGEN_CC=$withval])
 
@@ -336,40 +335,20 @@ fi
 
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
-case "x$WANT_GTK" in
-xgtk3*)
+if [[ "x$WANT_GTK" = "xgtk3" ]]; then
   WANT_GTK=no
-  AM_PATH_GTK_3_0(3.0.0, [
+  AM_PATH_GTK_3_0(3.22.30, [
     GUI_CFLAGS="$GTK_CFLAGS"
     GUI_LIBS="$GTK_LIBS"
-    WANT_GTK=gtk3
+    WANT_GTK=yes
   ], [
-    case "x${WANT_GTK}x" in
-    *gtkx)
-      AC_MSG_WARN([Could not find GTK+ 3.0, trying with GTK+ 1.2.])
-      WANT_GTK=gtk
-      ;;
-    *)
-      AC_MSG_WARN([Could not find GTK+, disabling user interface.])
-      WANT_GTK=no
-     ;;
-    esac
-  ])
-  ;;
-esac
-if [[ "x$WANT_GTK" = "xgtk" ]]; then
-  WANT_GTK=no
-  AM_PATH_GTK(1.2.0, [
-    GUI_CFLAGS="$GTK_CFLAGS"
-    GUI_LIBS="$GTK_LIBS"
-    WANT_GTK=gtk
-  ], [
-    AC_MSG_WARN([Could not find GTK+, disabling user interface.])
+    AC_MSG_WARN([Could not find GTK+ 3, disabling user interface.])
   ])
 fi
 if [[ "x$WANT_GTK" != "xno" -a "x$WANT_STANDALONE_GUI" = "xno" ]]; then
   AC_DEFINE(ENABLE_GTK, 1, [Define if using GTK.])
   UISRCS=prefs_editor_gtk.cpp
+  GRESOURCE=gresource.cpp
 fi
 AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
@@ -793,7 +772,7 @@ if [[ "x$have_libvhd" = "xyes" ]]; then
 fi
 
 
-SYSSRCS="$VIDEOSRCS $EXTFSSRC $PREFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $EXTRASYSSRCS"
+SYSSRCS="$VIDEOSRCS $EXTFSSRC $PREFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $GRESOURCE $EXTRASYSSRCS"
 
 dnl Define a macro that translates a yesno-variable into a C macro definition
 dnl to be put into the config.h file
@@ -1764,7 +1743,7 @@ echo Using PowerPC emulator ........... : $EMULATED_PPC
 echo Enable JIT compiler .............. : $WANT_JIT
 echo Enable video on SEGV signals ..... : $WANT_VOSF
 echo ESD sound support ................ : $WANT_ESD
-echo GTK user interface ............... : $WANT_GTK
+echo GTK+ 3 user interface ............ : $WANT_GTK
 echo mon debugger support ............. : $WANT_MON
 echo Addressing mode .................. : $WANT_ADDRESSING_MODE
 echo Bad memory access recovery type .. : $sigsegv_recovery

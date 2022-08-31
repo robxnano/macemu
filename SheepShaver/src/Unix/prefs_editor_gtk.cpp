@@ -367,12 +367,13 @@ mn_about (GSimpleAction *action,
 {
 
     char version[64];
-    sprintf(version, "%d.%d\n\n", VERSION_MAJOR, VERSION_MINOR);
+    sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
     const char *author[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", NULL};
 	GtkAboutDialog *dialog = GTK_ABOUT_DIALOG(gtk_about_dialog_new());
 	gtk_about_dialog_set_version(dialog, version);
 	gtk_about_dialog_set_copyright(dialog, "© 1997-2008 Christian Bauer and Marc Hellwig");
 	gtk_about_dialog_set_authors(dialog, author);
+	gtk_about_dialog_set_comments(dialog, "Open source PowerMac emulator");
 	gtk_about_dialog_set_website(dialog, "http://sheepshaver.cebix.net");
 	gtk_about_dialog_set_license(dialog, "SheepShaver comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it under the terms of the GNU General Public License.");
 	gtk_about_dialog_set_wrap_license(dialog, true);
@@ -400,7 +401,7 @@ static GActionEntry win_entries[] = {
 
 bool PrefsEditor(void)
 {
-    menubuilder_ = gtk_builder_new_from_file("menu.ui");
+    menubuilder_ = gtk_builder_new_from_resource("/net/cebix/SheepShaver/data/menu.ui");
     gtk_application_set_menubar(GTK_APPLICATION(gtk_builder_get_application(menubuilder_)),
                                  G_MENU_MODEL(gtk_builder_get_object(menubuilder_, "main-window-menu")));
 	// Get screen dimensions
@@ -429,6 +430,7 @@ bool PrefsEditor(void)
 	GtkWidget *notebook = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_TOP);
 	gtk_notebook_set_scrollable(GTK_NOTEBOOK(notebook), FALSE);
+	gtk_notebook_set_show_border(GTK_NOTEBOOK(notebook), FALSE);
 	gtk_box_pack_start(GTK_BOX(box), notebook, TRUE, TRUE, 0);
 	gtk_widget_realize(notebook);
 

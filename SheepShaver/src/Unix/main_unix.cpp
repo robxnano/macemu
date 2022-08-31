@@ -133,6 +133,7 @@
 
 #ifdef ENABLE_GTK
 #include <gtk/gtk.h>
+#include <gresource.h>
 #if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 #include <X11/Xlib.h>
 #endif
