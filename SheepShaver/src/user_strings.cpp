@@ -102,7 +102,7 @@ user_string_def common_strings[] = {
 	{STR_NOCDROM_CTRL, "Disable CD-ROM Driver"},
 	{STR_ADD_VOLUME_TITLE, "Add Volume"},
 	{STR_CREATE_VOLUME_TITLE, "Create Hardfile"},
-	{STR_HARDFILE_SIZE_CTRL, "Size (MB)"},
+	{STR_HARDFILE_SIZE_CTRL, "Size (MiB)"},
 
 	{STR_GRAPHICS_SOUND_PANE_TITLE, "Graphics/Sound"},
 	{STR_FRAMESKIP_CTRL, "Window Refresh Rate"},

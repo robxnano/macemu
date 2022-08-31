@@ -8,7 +8,7 @@
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
+ *  This program is distributd in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -161,6 +161,7 @@
 // Interrupts in native mode?
 #define INTERRUPTS_IN_NATIVE_MODE 1
 
+GtkWindow *win;
 
 // Constants
 const char ROM_FILE_NAME[] = "ROM";
@@ -735,8 +736,6 @@ static bool init_sdl()
 static void
 on_activate (GtkApplication *app)
 {
-	GtkWindow *window;
-
 	/* It's good practice to check your parameters at the beginning of the
 	 * function. It helps catch errors early and in development instead of
 	 * by your users.
@@ -744,11 +743,11 @@ on_activate (GtkApplication *app)
 	g_assert (GTK_IS_APPLICATION (app));
 
 	/* Get the current window or create one if necessary. */
-	window = gtk_application_get_active_window (app);
+	win = gtk_application_get_active_window (app);
 
 	/* Ask the window manager/compositor to present the window. */
-    if (window != NULL)
-    	gtk_window_present (window);
+    if (win != NULL)
+    	gtk_window_present (win);
 }
 
 int main(int argc, char **argv)
@@ -2315,28 +2314,16 @@ static void dl_quit(GtkWidget *button, GtkWidget *dialog)
 
 void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 {
-	char str[256];
-	sprintf(str, GetString(prefix_id), text);
-
-	GtkWidget *dialog = gtk_dialog_new();
-	gtk_window_set_title(GTK_WINDOW(dialog), GetString(title_id));
-	gtk_container_set_border_width(GTK_CONTAINER(dialog), 5);
-	//gtk_window_set_position(GTK_WINDOW(dialog), 100, 150);
-	g_signal_connect(GTK_DIALOG(dialog), "destroy", dl_destroyed(), NULL);
-
-	GtkWidget *label = gtk_label_new(str);
-	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), label, TRUE, TRUE, 0);
-
-	GtkWidget *button = gtk_button_new_with_label(GetString(button_id));
-	gtk_widget_show(button);
-	g_signal_connect(GTK_WIDGET(button), "clicked", G_CALLBACK(dl_quit), GTK_DIALOG(dialog));
-	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(dialog))), button, FALSE, FALSE, 0);
-	gtk_widget_set_receives_default(button, true);
-	gtk_widget_grab_default(button);
-	gtk_widget_show(dialog);
-
-	gtk_main();
+    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+                                               GTK_DIALOG_DESTROY_WITH_PARENT,
+                                               GTK_MESSAGE_ERROR,
+                                               GTK_BUTTONS_NONE,
+                                               GetString(title_id), NULL);
+    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
+	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+    return;
 }
 #endif
 
@@ -2354,6 +2341,13 @@ void ErrorAlert(const char *text)
 	}
 #if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
 	if (PrefsFindBool("nogui") || x_display == NULL) {
+		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
+		return;
+	}
+	VideoQuitFullScreen();
+	display_alert(win, STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
+#elif defined(ENABLE_GTK)
+	if (PrefsFindBool("nogui")) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
@@ -2381,6 +2375,13 @@ void WarningAlert(const char *text)
 		printf(GetString(STR_SHELL_WARNING_PREFIX), text);
 		return;
 	}
+	display_alert(STR_WARNING_ALERT_TITLE, STR_GUI_WARNING_PREFIX, STR_OK_BUTTON, text);
+#elif defined(ENABLE_GTK)
+	if (PrefsFindBool("nogui")) {
+		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
+		return;
+	}
+	VideoQuitFullScreen();
 	display_alert(STR_WARNING_ALERT_TITLE, STR_GUI_WARNING_PREFIX, STR_OK_BUTTON, text);
 #else
 	printf(GetString(STR_SHELL_WARNING_PREFIX), text);

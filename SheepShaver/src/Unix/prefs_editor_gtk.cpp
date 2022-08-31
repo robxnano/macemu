@@ -410,6 +410,7 @@ bool PrefsEditor(void)
 	// Create window
 	win = gtk_application_window_new(GTK_APPLICATION(g_application_get_default()));
 	g_assert(GTK_IS_APPLICATION_WINDOW (win));
+
 	gtk_window_set_title(GTK_WINDOW(win), GetString(STR_PREFS_TITLE));
     g_action_map_add_action_entries (G_ACTION_MAP (win),
                                  win_entries, G_N_ELEMENTS (win_entries),
@@ -423,11 +424,7 @@ bool PrefsEditor(void)
 	gtk_container_add(GTK_CONTAINER(win), box);
 
 	GtkAccelGroup *accel_group = gtk_accel_group_new();
-#if GTK_CHECK_VERSION(1,3,15)
 	gtk_window_add_accel_group(GTK_WINDOW(win), accel_group);
-#else
-	gtk_accel_group_attach(accel_group, GTK_WIDGET(win));
-#endif
 
 	GtkWidget *notebook = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_TOP);
@@ -473,6 +470,25 @@ enum {
 static GtkWidget *volume_view, *w_extfs, *w_boot_from;
 static int selected_volume;
 
+// Gets the size of the volume
+static const char* get_file_size (const char* path)
+{
+    GFile *file;
+    GFileInfo *info;
+    file = g_file_new_for_path(path);
+    if (g_file_query_exists(file, NULL))
+	{
+	    info = g_file_query_info(file, G_FILE_ATTRIBUTE_STANDARD_SIZE, G_FILE_QUERY_INFO_NONE, NULL, NULL);
+        guint64 size = guint64(g_file_info_get_size(info));
+        char *sizestr = g_format_size_full(size, G_FORMAT_SIZE_IEC_UNITS);
+        return sizestr;
+    }
+    else
+    {
+        return "Not Found";
+    }
+}
+
 // Volume in list selected
 static void cl_selected(GtkWidget *list, int row, int column)
 {
@@ -488,12 +504,14 @@ static void cb_add_volume(...)
                                                      "Cancel", GTK_RESPONSE_CANCEL,
                                                      "Add", GTK_RESPONSE_ACCEPT,
                                                      NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
     if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT)
     {
+        char *str = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
         gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
         gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
-                          COLUMN_PATH, gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser)),
-                          COLUMN_SIZE, "3",
+                          COLUMN_PATH, str,
+                          COLUMN_SIZE, get_file_size(str),
                           -1);
     }
 	gtk_widget_destroy(chooser);
@@ -532,7 +550,7 @@ static void cb_create_volume(...)
 	    const gchar *str = gtk_entry_get_text(GTK_ENTRY(size_entry));
 	    int disk_size = atoi(str);
 	    if (disk_size < 1 || disk_size > 2000) {
-		    printf("Disk size needs to be between 1 and 2000 MB.\n");
+		    printf("Disk size needs to be between 1 and 2000 MiB.\n");
 		    return;
 	    }
 	    // The dialog asks to confirm overwrite, so no need to prevent overwriting if file already exists
@@ -541,8 +559,12 @@ static void cb_create_volume(...)
 
 	    close(fd);
 
+        char *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
         gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
-        gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel, COLUMN_PATH, file, -1);
+        gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
+                          COLUMN_PATH, path,
+                          COLUMN_SIZE, get_file_size(path),
+                          -1);
     }
     gtk_widget_destroy (chooser);
 }
@@ -592,14 +614,17 @@ static void read_volumes_settings(void)
 static GtkTreeModel *
 get_volumes (void)
 {
-    char *str;
+    const char *str;
 	int32 index = 0;
     volume_store = GTK_TREE_MODEL(gtk_list_store_new(N_COLUMNS, G_TYPE_STRING, G_TYPE_STRING));
-	while ((str = (char *)PrefsFindString("disk", index++)) != NULL)
+	while ((str = (const char *)PrefsFindString("disk", index++)) != NULL)
 	{
 		gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
-        gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel, COLUMN_PATH, str, -1);
-	}
+        gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
+                          COLUMN_PATH, str,
+                          COLUMN_SIZE, get_file_size(str),
+                          -1);
+    }
     return volume_store;
 }
 
@@ -613,11 +638,20 @@ create_tree_view (void)
 
     view = gtk_tree_view_new();
     col = gtk_tree_view_column_new();
-    gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(view), false);
+    gtk_tree_view_column_set_title(col, "Location");
+    gtk_tree_view_set_reorderable(GTK_TREE_VIEW(view), true);
     gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+    gtk_tree_view_column_set_expand(col, true);
     renderer = gtk_cell_renderer_text_new();
     gtk_tree_view_column_pack_start(col, renderer, TRUE);
     gtk_tree_view_column_add_attribute(col, renderer, "text", COLUMN_PATH);
+
+    col = gtk_tree_view_column_new();
+    gtk_tree_view_column_set_title(col, "Size");
+    gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_column_pack_start(col, renderer, TRUE);
+    gtk_tree_view_column_add_attribute(col, renderer, "text", COLUMN_SIZE);
 
     model = get_volumes();
     gtk_tree_view_set_model(GTK_TREE_VIEW(view), model);
