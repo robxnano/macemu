@@ -157,8 +157,6 @@ user_string_def common_strings[] = {
 
 	{STR_MEMORY_MISC_PANE_TITLE, "Memory/Misc"},
 	{STR_RAMSIZE_CTRL, "MacOS RAM Size (MB)"},
-	{STR_RAMSIZE_4MB_LAB, "4"},
-	{STR_RAMSIZE_8MB_LAB, "8"},
 	{STR_RAMSIZE_16MB_LAB, "16"},
 	{STR_RAMSIZE_32MB_LAB, "32"},
 	{STR_RAMSIZE_64MB_LAB, "64"},

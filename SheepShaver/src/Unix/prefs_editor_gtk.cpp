@@ -1393,8 +1393,6 @@ static void create_memory_pane(GtkWidget *top)
 	grid = make_grid(box, 6);
 
 	static const combo_desc options[] = {
-		STR_RAMSIZE_4MB_LAB,
-		STR_RAMSIZE_8MB_LAB,
 		STR_RAMSIZE_16MB_LAB,
 		STR_RAMSIZE_32MB_LAB,
 		STR_RAMSIZE_64MB_LAB,
