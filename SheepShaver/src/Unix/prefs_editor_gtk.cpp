@@ -84,6 +84,18 @@ struct file_req_assoc {
 	GtkWidget *entry;
 };
 
+static void on_browse_response(GtkWidget *chooser, int response, GtkEntry *entry)
+{
+    if (response == GTK_RESPONSE_ACCEPT)
+    {
+        gchar *filename;
+        filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
+        gtk_entry_set_text(GTK_ENTRY(entry), filename);
+        g_free (filename);
+    }
+    gtk_widget_destroy (chooser);
+}
+
 static void cb_browse(GtkButton *button, GtkEntry *entry)
 {
 	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_BROWSE_TITLE),
@@ -93,14 +105,10 @@ static void cb_browse(GtkButton *button, GtkEntry *entry)
                                       "Open", GTK_RESPONSE_ACCEPT,
                                       NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT)
-    {
-        gchar *filename;
-        filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
-        gtk_entry_set_text(GTK_ENTRY(entry), filename);
-        g_free (filename);
-    }
-    gtk_widget_destroy (chooser);
+	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
+    gtk_window_set_modal(GTK_WINDOW(chooser), true);
+	g_signal_connect(chooser, "response", G_CALLBACK(on_browse_response), entry);
+	gtk_widget_show(chooser);
 }
 
 static void cb_browse_dir(GtkButton *button, GtkEntry *entry)
@@ -112,14 +120,10 @@ static void cb_browse_dir(GtkButton *button, GtkEntry *entry)
                                       "Select", GTK_RESPONSE_ACCEPT,
                                       NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT)
-    {
-        gchar *filename;
-        filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
-        gtk_entry_set_text(GTK_ENTRY(entry), filename);
-        g_free (filename);
-    }
-    gtk_widget_destroy (chooser);
+	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
+	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+	g_signal_connect(chooser, "response", G_CALLBACK(on_browse_response), entry);
+	gtk_widget_show(chooser);
 }
 
 static GtkWidget *make_browse_button(GtkEntry *entry, bool only_dirs = false)
@@ -497,17 +501,9 @@ static void cl_selected(GtkWidget *list, int row, int column)
 	selected_volume = row;
 }
 
-// "Add Volume" button clicked
-static void cb_add_volume(...)
+static void on_add_volume_response (GtkWidget *chooser, int response)
 {
-    GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_ADD_VOLUME_TITLE),
-                                                     GTK_WINDOW(win),
-                                                     GTK_FILE_CHOOSER_ACTION_OPEN,
-                                                     "Cancel", GTK_RESPONSE_CANCEL,
-                                                     "Add", GTK_RESPONSE_ACCEPT,
-                                                     NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-    if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT)
+    if (response == GTK_RESPONSE_ACCEPT)
     {
         char *str = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
         gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
@@ -519,40 +515,40 @@ static void cb_add_volume(...)
 	gtk_widget_destroy(chooser);
 }
 
-// "Create Hardfile" button clicked
-static void cb_create_volume(...)
+// "Add Volume" button clicked
+static void cb_add_volume(...)
 {
-	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_CREATE_VOLUME_TITLE),
-                                      GTK_WINDOW(win),
-                                      GTK_FILE_CHOOSER_ACTION_SAVE,
-                                      "Cancel", GTK_RESPONSE_CANCEL,
-                                      "Create", GTK_RESPONSE_ACCEPT,
-                                      NULL);
-    gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(chooser), TRUE);
+    GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_ADD_VOLUME_TITLE),
+                                                     GTK_WINDOW(win),
+                                                     GTK_FILE_CHOOSER_ACTION_OPEN,
+                                                     "Cancel", GTK_RESPONSE_CANCEL,
+                                                     "Add", GTK_RESPONSE_ACCEPT,
+                                                     NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
+	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+	g_signal_connect(chooser, "response", G_CALLBACK(on_add_volume_response), NULL);
+	gtk_widget_show(chooser);
+}
 
-	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	gtk_widget_show(box);
-	GtkWidget *label = gtk_label_new(GetString(STR_HARDFILE_SIZE_CTRL));
-	gtk_widget_show(label);
-	GtkWidget *size_entry = gtk_entry_new();
-	gtk_widget_show(size_entry);
-	char str[32];
-	sprintf(str, "%d", 512);
-	gtk_entry_set_text(GTK_ENTRY(size_entry), str);
-	gtk_box_pack_end(GTK_BOX(box), size_entry, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(box), label, FALSE, FALSE, 0);
-	gtk_widget_set_hexpand(box, TRUE);
+static void on_create_volume_response(GtkWidget *chooser, int response, GtkEntry *size_entry)
+{
 
-	gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(chooser), box);
-
-	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT)
+	if (response == GTK_RESPONSE_ACCEPT)
     {
         gchar *file = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
 	    const gchar *str = gtk_entry_get_text(GTK_ENTRY(size_entry));
 	    int disk_size = atoi(str);
 	    if (disk_size < 1 || disk_size > 2000) {
-		    printf("Disk size needs to be between 1 and 2000 MiB.\n");
+            GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+                                               GTK_DIALOG_DESTROY_WITH_PARENT,
+                                               GTK_MESSAGE_WARNING,
+                                               GTK_BUTTONS_CLOSE,
+                                               "Enter a valid size", NULL);
+            gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "The volume size should be between 1 and 2000.");
+            gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(chooser));
+            gtk_window_set_modal(GTK_WINDOW(dialog), true);
+	        g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
+            gtk_widget_show(dialog);
 		    return;
 	    }
 	    // The dialog asks to confirm overwrite, so no need to prevent overwriting if file already exists
@@ -569,6 +565,39 @@ static void cb_create_volume(...)
                           -1);
     }
     gtk_widget_destroy (chooser);
+}
+
+// "Create Hardfile" button clicked
+static void cb_create_volume(...)
+{
+	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_CREATE_VOLUME_TITLE),
+                                      GTK_WINDOW(win),
+                                      GTK_FILE_CHOOSER_ACTION_SAVE,
+                                      "Cancel", GTK_RESPONSE_CANCEL,
+                                      "Create", GTK_RESPONSE_ACCEPT,
+                                      NULL);
+    gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(chooser), TRUE);
+	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
+	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
+    gtk_window_set_modal(GTK_WINDOW(chooser), true);
+
+	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_widget_show(box);
+	GtkWidget *label = gtk_label_new(GetString(STR_HARDFILE_SIZE_CTRL));
+	gtk_widget_show(label);
+	GtkWidget *size_entry = gtk_entry_new();
+	gtk_widget_show(size_entry);
+	char str[32];
+	sprintf(str, "%d", 512);
+	gtk_entry_set_text(GTK_ENTRY(size_entry), str);
+	gtk_box_pack_end(GTK_BOX(box), size_entry, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(box), label, FALSE, FALSE, 0);
+	gtk_widget_set_hexpand(box, TRUE);
+
+	gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(chooser), box);
+
+	g_signal_connect(chooser, "response", G_CALLBACK(on_create_volume_response), size_entry);
+	gtk_widget_show(chooser);
 }
 
 // "Remove Volume" button clicked
