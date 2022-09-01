@@ -1350,11 +1350,19 @@ static void create_serial_pane(GtkWidget *top)
 
 static GtkWidget *w_ramsize;
 static GtkWidget *w_rom_file;
+static GtkWidget *l_nogui;
 
 // Don't use CPU when idle?
 static void tb_idlewait(GtkWidget *widget)
 {
 	PrefsReplaceBool("idlewait", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+}
+
+// Don't show settings window before launching?
+static void tb_nogui(GtkWidget *widget)
+{
+	PrefsReplaceBool("nogui", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+	gtk_widget_set_visible(l_nogui, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
 }
 
 // "Ignore SEGV" button toggled
@@ -1407,6 +1415,12 @@ static void create_memory_pane(GtkWidget *top)
 
 	make_checkbox(box, STR_IGNORESEGV_CTRL, "ignoresegv", G_CALLBACK(tb_ignoresegv));
 	make_checkbox(box, STR_IDLEWAIT_CTRL, "idlewait", G_CALLBACK(tb_idlewait));
+	make_checkbox(box, STR_NOGUI_CTRL, "nogui", G_CALLBACK(tb_nogui));
+	l_nogui = gtk_label_new(GetString(STR_NOGUI_TIP2));
+	gtk_widget_set_halign(l_nogui, GTK_ALIGN_START);
+	gtk_widget_set_margin_start(l_nogui, 24);
+	gtk_widget_set_visible(l_nogui, PrefsFindBool("nogui"));
+	gtk_box_pack_start(GTK_BOX(box), l_nogui, FALSE, FALSE, 0);
 }
 
 

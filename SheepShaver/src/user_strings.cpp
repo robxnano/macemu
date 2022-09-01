@@ -171,6 +171,9 @@ user_string_def common_strings[] = {
 	{STR_IGNORESEGV_CTRL, "Ignore Illegal Memory Accesses"},
 	{STR_IDLEWAIT_CTRL, "Don't Use CPU When Idle"},
 	{STR_ROM_FILE_CTRL, "ROM File"},
+	{STR_NOGUI_CTRL, "Don't show settings window on launch"},
+	{STR_NOGUI_TIP, "Tip: You can access the settings by right-clicking on the launcher icon." },
+	{STR_NOGUI_TIP2, "Tip: You can access the settings with the command: SheepShaver --nogui false" },
 
 	{STR_JIT_PANE_TITLE, "JIT Compiler"},
 	{STR_JIT_CTRL, "Enable JIT Compiler"},
