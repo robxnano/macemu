@@ -405,15 +405,21 @@ static GActionEntry win_entries[] = {
 
 bool PrefsEditor(void)
 {
+    GApplication *app = g_application_get_default();
+    if (g_application_get_is_remote(app))
+    {
+        printf("ERROR: Another instance of SheepShaver is running, quitting...\n");
+        return false;
+    }
     menubuilder_ = gtk_builder_new_from_resource("/net/cebix/SheepShaver/data/menu.ui");
-    gtk_application_set_menubar(GTK_APPLICATION(gtk_builder_get_application(menubuilder_)),
+    gtk_application_set_menubar(GTK_APPLICATION(app),
                                  G_MENU_MODEL(gtk_builder_get_object(menubuilder_, "main-window-menu")));
 	// Get screen dimensions
 	screen_width = gdk_screen_width();
 	screen_height = gdk_screen_height();
 
 	// Create window
-	win = gtk_application_window_new(GTK_APPLICATION(g_application_get_default()));
+	win = gtk_application_window_new(GTK_APPLICATION(app));
 	g_assert(GTK_IS_APPLICATION_WINDOW (win));
 
 	gtk_window_set_title(GTK_WINDOW(win), GetString(STR_PREFS_TITLE));
