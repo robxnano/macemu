@@ -178,16 +178,18 @@ user_string_def common_strings[] = {
 	{STR_JIT_68K_CTRL, "Enable built-in 68k DR Emulator (EXPERIMENTAL)"},
 
 	{STR_WINDOW_TITLE, "SheepShaver"},
-	{STR_WINDOW_TITLE_GRABBED0, " (mouse grabbed, press "},
-	{STR_WINDOW_TITLE_GRABBED1, "Ctrl-"},
+	{STR_WINDOW_TITLE_GRABBED1, " (mouse grabbed, press Ctrl+F5 to release)"},
 #ifdef __APPLE__
-	{STR_WINDOW_TITLE_GRABBED2, "Opt-"},
-	{STR_WINDOW_TITLE_GRABBED3, "Cmd-"},
+	{STR_WINDOW_TITLE_GRABBED2, " (mouse grabbed, press Opt+F5 to release)"},
+	{STR_WINDOW_TITLE_GRABBED3, " (mouse grabbed, press Cmd+F5 to release)"},
 #else
-	{STR_WINDOW_TITLE_GRABBED2, "Alt-"},
-	{STR_WINDOW_TITLE_GRABBED3, "Win-"},
+	{STR_WINDOW_TITLE_GRABBED2, " (mouse grabbed, press Alt+F5 to release)"},
 #endif
-	{STR_WINDOW_TITLE_GRABBED4, "F5 to release)"},
+#ifdef __WIN32__
+	{STR_WINDOW_TITLE_GRABBED3, " (mouse grabbed, press Win+F5 to release)"},
+#elif !defined(__APPLE__)
+	{STR_WINDOW_TITLE_GRABBED3, " (mouse grabbed, press Super+F5 to release)"},
+#endif
 	{STR_WINDOW_MENU, "SheepShaver"},
 	{STR_WINDOW_ITEM_ABOUT, "About SheepShaver" ELLIPSIS},
 	{STR_WINDOW_ITEM_REFRESH, "Refresh Rate"},
