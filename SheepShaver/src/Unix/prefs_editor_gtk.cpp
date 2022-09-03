@@ -730,13 +730,16 @@ static void create_volumes_pane(GtkWidget *top)
 	w_extfs = grid_make_file_entry(grid, 0, STR_EXTFS_CTRL, "extfs", true);
 
     int initial = (PrefsFindInt32("bootdriver") == CDROMRefNum) ? 1 : 0;
-	combo_desc options[] = {STR_BOOT_ANY_LAB, STR_BOOT_CDROM_LAB};
+	combo_desc options[] = {
+	    STR_BOOT_ANY_LAB,
+	    STR_BOOT_CDROM_LAB,
+	    0
+	};
 	w_boot_from = grid_make_combo_box(grid, 1, false, STR_BOOTDRIVER_CTRL, options, initial);
 	gtk_widget_set_hexpand(w_boot_from, false);
 
 	make_checkbox(box, STR_NOCDROM_CTRL, "nocdrom", G_CALLBACK(tb_nocdrom));
 }
-
 
 /*
  *  "JIT Compiler" pane
@@ -1172,7 +1175,11 @@ static void create_input_pane(GtkWidget *top)
 
 	make_separator(box);
 	grid = make_grid(box, 6);
-	combo_desc options[] = { STR_MOUSEWHEELMODE_PAGE_LAB, STR_MOUSEWHEELMODE_CURSOR_LAB };
+	combo_desc options[] = {
+	    STR_MOUSEWHEELMODE_PAGE_LAB,
+	    STR_MOUSEWHEELMODE_CURSOR_LAB,
+	    0
+	};
 	int wheelmode = PrefsFindInt32("mousewheelmode");
     w_wheel_mode = grid_make_combo_box(grid, 0, false, STR_MOUSEWHEELMODE_CTRL, options, wheelmode, G_CALLBACK(mn_wheel_mode));
 	gtk_widget_show(w_wheel_mode);
