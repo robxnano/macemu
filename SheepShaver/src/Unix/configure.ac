@@ -337,10 +337,10 @@ dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
 if [[ "x$WANT_GTK" = "xgtk3" ]]; then
   WANT_GTK=no
-  AM_PATH_GTK_3_0(3.22.30, [
+  AM_PATH_GTK_3_0(3.14.5, [
     GUI_CFLAGS="$GTK_CFLAGS"
     GUI_LIBS="$GTK_LIBS"
-    WANT_GTK=yes
+    WANT_GTK=gtk3
   ], [
     AC_MSG_WARN([Could not find GTK+ 3, disabling user interface.])
   ])
@@ -1743,7 +1743,7 @@ echo Using PowerPC emulator ........... : $EMULATED_PPC
 echo Enable JIT compiler .............. : $WANT_JIT
 echo Enable video on SEGV signals ..... : $WANT_VOSF
 echo ESD sound support ................ : $WANT_ESD
-echo GTK+ 3 user interface ............ : $WANT_GTK
+echo GTK+ user interface .............. : $WANT_GTK
 echo mon debugger support ............. : $WANT_MON
 echo Addressing mode .................. : $WANT_ADDRESSING_MODE
 echo Bad memory access recovery type .. : $sigsegv_recovery

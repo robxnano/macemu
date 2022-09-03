@@ -405,15 +405,15 @@ static GActionEntry win_entries[] = {
 
 bool PrefsEditor(void)
 {
-    GApplication *app = g_application_get_default();
-    if (g_application_get_is_remote(app))
-    {
-        printf("ERROR: Another instance of SheepShaver is running, quitting...\n");
-        return false;
-    }
-    menubuilder_ = gtk_builder_new_from_resource("/net/cebix/SheepShaver/data/menu.ui");
-    gtk_application_set_menubar(GTK_APPLICATION(app),
-                                 G_MENU_MODEL(gtk_builder_get_object(menubuilder_, "main-window-menu")));
+	GApplication *app = g_application_get_default();
+	if (g_application_get_is_remote(app))
+	{
+		printf("ERROR: Another instance of SheepShaver is running, quitting...\n");
+		return false;
+	}
+	menubuilder_ = gtk_builder_new_from_resource("/net/cebix/SheepShaver/data/menu.ui");
+	gtk_application_set_menubar(GTK_APPLICATION(app),
+				    G_MENU_MODEL(gtk_builder_get_object(menubuilder_, "main-window-menu")));
 	// Get screen dimensions
 	screen_width = gdk_screen_width();
 	screen_height = gdk_screen_height();

@@ -736,6 +736,13 @@ static bool init_sdl()
 #endif
 
 static void
+on_startup (GtkApplication *app)
+{
+	if (!PrefsEditor())
+		Quit();
+}
+
+static void
 on_activate (GtkApplication *app)
 {
 	/* It's good practice to check your parameters at the beginning of the
@@ -755,7 +762,7 @@ on_activate (GtkApplication *app)
 int main(int argc, char **argv)
 {
 #ifdef ENABLE_GTK
-	g_autoptr(GtkApplication) app = NULL;
+	GtkApplication *app = NULL;
 	int ret;
 #endif
 #if defined(ENABLE_GTK) && !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
@@ -873,17 +880,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifdef ENABLE_GTK
-	if (!gui_connection) {
-		// Init GTK
-		app = gtk_application_new ("net.cebix.SheepShaver", G_APPLICATION_FLAGS_NONE);
-		g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);
-		gtk_init(&argc, &argv);
-	    ret = g_application_run (G_APPLICATION (app), argc, argv);
-	    g_application_register(G_APPLICATION (app), NULL, NULL);
-	}
-#endif
-
 	// Read preferences
 	PrefsInit(vmdir, argc, argv);
 
@@ -940,10 +936,16 @@ int main(int argc, char **argv)
 	// Init system routines
 	SysInit();
 
-	// Show preferences editor
-	if (!PrefsFindBool("nogui") || use_gui)
-		if (!PrefsEditor())
-			goto quit;
+#ifdef ENABLE_GTK
+	if (!gui_connection) {
+		// Init GTK
+		app = gtk_application_new ("net.cebix.SheepShaver", G_APPLICATION_FLAGS_NONE);
+		g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);
+		g_signal_connect (app, "startup", G_CALLBACK (on_startup), NULL);
+		ret = g_application_run (G_APPLICATION (app), argc, argv);
+		g_application_register(G_APPLICATION (app), NULL, NULL);
+	}
+#endif
 
 #if !EMULATED_PPC
 	// Check some things
@@ -2315,7 +2317,7 @@ void SheepMem::Exit(void)
 static GCallback dl_destroyed(void)
 {
 	gtk_main_quit();
-	return nullptr;
+	return NULL;
 }
 
 static void dl_quit(GtkWidget *button, GtkWidget *dialog)
