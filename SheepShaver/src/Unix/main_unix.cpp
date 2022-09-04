@@ -229,7 +229,7 @@ static bool tick_thread_active = false;		// Flag: MacOS thread installed
 static volatile bool tick_thread_cancel;	// Flag: Cancel 60Hz thread
 static pthread_t tick_thread;				// 60Hz thread
 static pthread_t emul_thread;				// MacOS thread
-static bool use_gui = false;                // Override prefs and show gui
+static bool use_gui = false;				// Override prefs and show gui
 
 static bool ready_for_signals = false;		// Handler installed, signals can be sent
 
@@ -1558,16 +1558,16 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 		struct sched_param fifo_param;
 		fifo_param.sched_priority = ((sched_get_priority_min(SCHED_FIFO) + 
 					      sched_get_priority_max(SCHED_FIFO)) / 2 +
-					     priority);
+					      priority);
 		pthread_attr_setschedparam(attr, &fifo_param);
 	}
 	if (pthread_attr_setscope(attr, PTHREAD_SCOPE_SYSTEM) != 0) {
 #ifdef PTHREAD_SCOPE_BOUND_NP
-	    // If system scope is not available (eg. we're not running
-	    // with CAP_SCHED_MGT capability on an SGI box), try bound
-	    // scope.  It exposes pthread scheduling to the kernel,
-	    // without setting realtime priority.
-	    pthread_attr_setscope(attr, PTHREAD_SCOPE_BOUND_NP);
+		// If system scope is not available (eg. we're not running
+		// with CAP_SCHED_MGT capability on an SGI box), try bound
+		// scope.  It exposes pthread scheduling to the kernel,
+		// without setting realtime priority.
+		pthread_attr_setscope(attr, PTHREAD_SCOPE_BOUND_NP);
 #endif
 	}
 #endif
@@ -1583,26 +1583,26 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 
 struct B2_mutex {
 	B2_mutex() { 
-	    pthread_mutexattr_t attr;
-	    pthread_mutexattr_init(&attr);
-	    // Initialize the mutex for priority inheritance --
-	    // required for accurate timing.
+		pthread_mutexattr_t attr;
+		pthread_mutexattr_init(&attr);
+		// Initialize the mutex for priority inheritance --
+		// required for accurate timing.
 #if defined(HAVE_PTHREAD_MUTEXATTR_SETPROTOCOL) && !defined(__CYGWIN__)
-	    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+		pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
 #endif
 #if defined(HAVE_PTHREAD_MUTEXATTR_SETTYPE) && defined(PTHREAD_MUTEX_NORMAL)
-	    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
 #ifdef HAVE_PTHREAD_MUTEXATTR_SETPSHARED
-	    pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE);
+		pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE);
 #endif
-	    pthread_mutex_init(&m, &attr);
-	    pthread_mutexattr_destroy(&attr);
+		pthread_mutex_init(&m, &attr);
+		pthread_mutexattr_destroy(&attr);
 	}
 	~B2_mutex() { 
-	    pthread_mutex_trylock(&m); // Make sure it's locked before
-	    pthread_mutex_unlock(&m);  // unlocking it.
-	    pthread_mutex_destroy(&m);
+		pthread_mutex_trylock(&m); // Make sure it's locked before
+		pthread_mutex_unlock(&m);  // unlocking it.
+		pthread_mutex_destroy(&m);
 	}
 	pthread_mutex_t m;
 };
@@ -2327,16 +2327,16 @@ static void dl_quit(GtkWidget *button, GtkWidget *dialog)
 
 void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 {
-    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
-                                               GTK_DIALOG_DESTROY_WITH_PARENT,
-                                               GTK_MESSAGE_ERROR,
-                                               GTK_BUTTONS_NONE,
-                                               GetString(title_id), NULL);
-    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+						GTK_DIALOG_DESTROY_WITH_PARENT,
+						GTK_MESSAGE_ERROR,
+						GTK_BUTTONS_NONE,
+						GetString(title_id), NULL);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
 	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-    return;
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+	return;
 }
 #endif
 
