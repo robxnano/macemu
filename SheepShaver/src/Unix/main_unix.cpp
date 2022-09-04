@@ -735,29 +735,24 @@ static bool init_sdl()
 }
 #endif
 
+#ifdef ENABLE_GTK
 static void
-on_startup (GtkApplication *app)
+gtk_startup (GtkApplication *app)
 {
 	if (!PrefsEditor())
 		Quit();
 }
 
 static void
-on_activate (GtkApplication *app)
+gtk_activate (GtkApplication *app)
 {
-	/* It's good practice to check your parameters at the beginning of the
-	 * function. It helps catch errors early and in development instead of
-	 * by your users.
-	 */
 	g_assert (GTK_IS_APPLICATION (app));
-
-	/* Get the current window or create one if necessary. */
 	win = gtk_application_get_active_window (app);
-
 	/* Ask the window manager/compositor to present the window. */
     if (win != NULL)
     	gtk_window_present (win);
 }
+#endif
 
 int main(int argc, char **argv)
 {
@@ -940,10 +935,10 @@ int main(int argc, char **argv)
 	if (!gui_connection) {
 		// Init GTK
 		app = gtk_application_new ("net.cebix.SheepShaver", G_APPLICATION_FLAGS_NONE);
-		g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);
-		g_signal_connect (app, "startup", G_CALLBACK (on_startup), NULL);
-		ret = g_application_run (G_APPLICATION (app), argc, argv);
+		g_signal_connect (app, "activate", G_CALLBACK (gtk_activate), NULL);
+		g_signal_connect (app, "startup", G_CALLBACK (gtk_startup), NULL);
 		g_application_register(G_APPLICATION (app), NULL, NULL);
+		ret = g_application_run (G_APPLICATION (app), argc, argv);
 	}
 #endif
 
