@@ -2052,9 +2052,14 @@ static bool is_hotkey_down(SDL_Keysym const & ks)
 {
 	int hotkey = PrefsFindInt32("hotkey");
 	if (!hotkey) hotkey = 1;
-	return (ctrl_down || (ks.mod & KMOD_CTRL) || !(hotkey & 1)) &&
-			(opt_down || (ks.mod & KMOD_ALT) || !(hotkey & 2)) &&
-			(cmd_down || (ks.mod & KMOD_GUI) || !(hotkey & 4));
+	if (PrefsFindBool("swap_opt_cmd"))
+    	return (ctrl_down || (ks.mod & KMOD_CTRL)|| !(hotkey & 1)) &&
+	    		(cmd_down || (ks.mod & KMOD_ALT) || !(hotkey & 2)) &&
+	    		(opt_down || (ks.mod & KMOD_GUI) || !(hotkey & 4));
+	else return(ctrl_down || (ks.mod & KMOD_CTRL)|| !(hotkey & 1)) &&
+	    		(opt_down || (ks.mod & KMOD_ALT) || !(hotkey & 2)) &&
+	    		(cmd_down || (ks.mod & KMOD_GUI) || !(hotkey & 4));
+
 }
 
 static int modify_opt_cmd(int code) {
