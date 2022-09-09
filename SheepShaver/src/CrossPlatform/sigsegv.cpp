@@ -45,11 +45,6 @@
 using std::list;
 #endif
 
-// Return value type of a signal handler (standard type if not defined)
-#ifndef RETSIGTYPE
-#define RETSIGTYPE void
-#endif
-
 // Size of an unsigned integer large enough to hold all bits of a pointer
 // NOTE: this can be different than SIGSEGV_REGISTER_TYPE. In
 // particular, on ILP32 systems with a 64-bit kernel (HP-UX/ia64?)
@@ -63,7 +58,7 @@ typedef unsigned long sigsegv_uintptr_t;
 #endif
 
 // Type of the system signal handler
-typedef RETSIGTYPE (*signal_handler)(int);
+typedef void (*signal_handler)(int);
 
 // User's SIGSEGV handler
 static sigsegv_fault_handler_t sigsegv_fault_handler = 0;

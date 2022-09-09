@@ -516,16 +516,6 @@ fi
 dnl We use 64-bit file size support if possible.
 AC_SYS_LARGEFILE
 
-dnl Checks for header files.
-m4_warn([obsolete],
-[The preprocessor macro `STDC_HEADERS' is obsolete.
-  Except in unusual embedded environments, you can safely include all
-  ISO C90 headers unconditionally.])dnl
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
-
 AC_CHECK_HEADERS(stdlib.h stdint.h)
 AC_CHECK_HEADERS(unistd.h fcntl.h sys/types.h sys/time.h sys/mman.h mach/mach.h)
 AC_CHECK_HEADERS(readline.h history.h readline/readline.h readline/history.h)
@@ -560,32 +550,6 @@ AC_TYPE_OFF_T
 AC_CHECK_TYPES(loff_t)
 AC_CHECK_TYPES(caddr_t)
 AC_TYPE_SIZE_T
-m4_warn([obsolete],
-[your code may safely assume C89 semantics that RETSIGTYPE is void.
-Remove this warning and the `AC_CACHE_CHECK' when you adjust the code.])dnl
-AC_CACHE_CHECK([return type of signal handlers],[ac_cv_type_signal],[AC_COMPILE_IFELSE(
-[AC_LANG_PROGRAM([#include <sys/types.h>
-#include <signal.h>
-],
-		 [return *(signal (0, 0)) (0) == 1;])],
-		   [ac_cv_type_signal=int],
-		   [ac_cv_type_signal=void])])
-AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type of signal handlers
-		    (`int' or `void').])
-
-m4_warn([obsolete],
-[Update your code to rely only on HAVE_SYS_TIME_H,
-then remove this warning and the obsolete code below it.
-All current systems provide time.h; it need not be checked for.
-Not all systems provide sys/time.h, but those that do, all allow
-you to include it and time.h simultaneously.])dnl
-AC_CHECK_HEADERS_ONCE([sys/time.h])
-# Obsolete code to be removed.
-if test $ac_cv_header_sys_time_h = yes; then
-  AC_DEFINE([TIME_WITH_SYS_TIME],[1],[Define to 1 if you can safely include both <sys/time.h>
-	     and <time.h>.  This macro is obsolete.])
-fi
-# End of obsolete code.
 
 AC_STRUCT_TM
 
@@ -1161,7 +1125,7 @@ AC_CACHE_CHECK([whether signal handlers need to be reinstalled],
     #endif
     #include <signal.h>
     static int handled_signal = 0;
-    RETSIGTYPE sigusr1_handler(int) { handled_signal++; }
+    void sigusr1_handler(int) { handled_signal++; }
     int main(void) { /* returns 0 if signals need not to be reinstalled */
       signal(SIGUSR1, sigusr1_handler); raise(SIGUSR1); raise(SIGUSR1);
       exit(handled_signal == 2);
@@ -1185,8 +1149,8 @@ AC_CACHE_CHECK([whether sigaction handlers need to be reinstalled],
     #endif
     #include <signal.h>
     static int handled_signal = 0;
-    RETSIGTYPE sigusr1_handler(int) { handled_signal++; }
-    typedef RETSIGTYPE (*signal_handler)(int);
+    void sigusr1_handler(int) { handled_signal++; }
+    typedef void (*signal_handler)(int);
     static signal_handler mysignal(int sig, signal_handler handler) {
       struct sigaction old_sa;
       struct sigaction new_sa;

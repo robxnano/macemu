@@ -4,6 +4,7 @@
 dnl AM_PATH_GTK_2_0([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND [, MODULES]]]])
 dnl Test for GTK+, and define GTK_CFLAGS and GTK_LIBS, if gthread is specified in MODULES, 
 dnl pass to pkg-config
+dnl Will this line appear?
 dnl
 AC_DEFUN([AM_PATH_GTK_2_0],
 [dnl 
