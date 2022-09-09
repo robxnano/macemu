@@ -25,11 +25,22 @@
 // Platform-specific string definitions
 user_string_def platform_strings[] = {
 	// Common strings that have a platform-specific variant
+#ifdef __linux__
+	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Linux. Basilisk II will try to unmount it."},
+	{STR_EXTFS_CTRL, "Linux Shared Folder"},
+	{STR_EXTFS_NAME, "Linux Directory Tree"},
+	{STR_EXTFS_VOLUME_NAME, "Linux"},
+#elif __MACOSX__
+	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under macOS. Basilisk II will try to unmount it."},
+	{STR_EXTFS_CTRL, "Shared Folder"},
+	{STR_EXTFS_NAME, "macOS Directory Tree"},
+	{STR_EXTFS_VOLUME_NAME, "macOS"},
+#else
 	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Unix. Basilisk II will try to unmount it."},
-	{STR_EXTFS_CTRL, "Unix Root"},
+	{STR_EXTFS_CTRL, "Unix Shared Folder"},
 	{STR_EXTFS_NAME, "Unix Directory Tree"},
 	{STR_EXTFS_VOLUME_NAME, "Unix"},
-
+#endif
 	// Purely platform-specific strings
 	{STR_NO_XSERVER_ERR, "Cannot connect to X server '%s'."},
 	{STR_NO_XVISUAL_ERR, "Cannot obtain appropriate X visual."},

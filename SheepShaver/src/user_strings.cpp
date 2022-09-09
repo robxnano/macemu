@@ -99,7 +99,7 @@ user_string_def common_strings[] = {
 	{STR_BOOTDRIVER_CTRL, "Boot From"},
 	{STR_BOOT_ANY_LAB, "Any"},
 	{STR_BOOT_CDROM_LAB, "CD-ROM"},
-	{STR_NOCDROM_CTRL, "Disable CD-ROM Driver"},
+	{STR_NOCDROM_CTRL, "Disable Physical CD-ROM Driver"},
 	{STR_ADD_VOLUME_TITLE, "Add Volume"},
 	{STR_CREATE_VOLUME_TITLE, "Create Hardfile"},
 	{STR_HARDFILE_SIZE_CTRL, "Size (MiB)"},
