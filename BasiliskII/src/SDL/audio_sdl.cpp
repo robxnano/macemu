@@ -361,8 +361,8 @@ void audio_set_speaker_volume(uint32 vol)
 {
 }
 
-static int play_startup(void *arg) {
 #if SDL_VERSION_ATLEAST(2,0,0)
+static int play_startup(void *arg) {
 	SDL_AudioSpec wav_spec;
 	Uint8 *wav_buffer;
 	Uint32 wav_length;
@@ -379,12 +379,14 @@ static int play_startup(void *arg) {
 		else printf("play_startup: Audio driver failed to initialize\n");
 		SDL_FreeWAV(wav_buffer);
 	}
-#endif
 	return 0;
 }
 
 void PlayStartupSound() {
-#if SDL_VERSION_ATLEAST(2,0,0)
 	SDL_CreateThread(play_startup, "", NULL);
-#endif
 }
+#else
+void PlayStartupSound() {
+    // Not implemented
+}
+#endif

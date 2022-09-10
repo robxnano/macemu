@@ -366,6 +366,7 @@ public:
 
 	virtual void switch_to_current_mode(void);
 	virtual void set_palette(uint8 *pal, int num);
+	virtual void set_gamma(uint8 *gamma, int num);
 
 	bool video_open(void);
 	void video_close(void);
@@ -523,24 +524,22 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth)
 // Set window name and class
 static void set_window_name(bool mouse_grabbed)
 {
+	const char *title = PrefsFindString("title");
+	std::string s = title ? title : GetString(STR_WINDOW_TITLE);
 	int grabbed = 0;
 	if (mouse_grabbed)
 	{
+        s += GetString(STR_WINDOW_TITLE_GRABBED_PRE);
 		int hotkey = PrefsFindInt32("hotkey");
-		if (hotkey & 2)
-			grabbed = STR_WINDOW_TITLE_GRABBED2;
-		else if (hotkey & 4)
-			grabbed = STR_WINDOW_TITLE_GRABBED3;
-		else
-			grabbed = STR_WINDOW_TITLE_GRABBED1;
+		hotkey = hotkey ? hotkey : 1;
+		if (hotkey & 1) s += GetString(STR_WINDOW_TITLE_GRABBED1);
+        if (hotkey & 2) s += GetString(STR_WINDOW_TITLE_GRABBED2);
+        if (hotkey & 4) s += GetString(STR_WINDOW_TITLE_GRABBED4);
+        s += GetString(STR_WINDOW_TITLE_GRABBED_POST);
 	}
 	const SDL_VideoInfo *vi = SDL_GetVideoInfo();
 	if (vi && vi->wm_available)
 	{
-		const char *title = PrefsFindString("title");
-		std::string s = title ? title : GetString(STR_WINDOW_TITLE);
-		if(grabbed)
-			s += GetString(grabbed);
 		//The icon name should stay the same
 		SDL_WM_SetCaption(s.c_str(), GetString(STR_WINDOW_TITLE));
 	}
@@ -1469,6 +1468,10 @@ void SDL_monitor_desc::set_palette(uint8 *pal, int num_in)
 	UNLOCK_PALETTE;
 }
 
+void SDL_monitor_desc::set_gamma(uint8 *gamma, int num_in)
+{
+	// Not implemented
+}
 
 /*
  *  Switch video mode
