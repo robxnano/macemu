@@ -229,7 +229,7 @@ static bool tick_thread_active = false;		// Flag: MacOS thread installed
 static volatile bool tick_thread_cancel;	// Flag: Cancel 60Hz thread
 static pthread_t tick_thread;				// 60Hz thread
 static pthread_t emul_thread;				// MacOS thread
-static bool use_gui = false;				// Override prefs and show gui
+static int use_gui = -1 ;   				// Override prefs and show gui
 
 static bool ready_for_signals = false;		// Handler installed, signals can be sent
 
@@ -739,7 +739,7 @@ static bool init_sdl()
 static void
 gtk_startup (GtkApplication *app)
 {
-	if (!PrefsEditor())
+	if (use_gui && !PrefsEditor())
 		Quit();
 }
 
@@ -832,15 +832,21 @@ int main(int argc, char **argv)
 				UserPrefsPath = argv[i];
 				argv[i] = NULL;
 			}
-		// We intercept the --nogui commandline so that the checkbox in
-		// the settings window will display the correct setting
+		// We intercept the --nogui commandline so that the settings
+		// window can change the setting from the prefs file
 		} else if (strcmp(argv[i], "--nogui") == 0) {
 			argv[i++] = NULL;
 			if (i < argc) {
-				if (strcmp(argv[i], "false") == 0)
+				if (strcmp(argv[i], "true") == 0)
+				    use_gui = false;
+				else
 				    use_gui = true;
 				argv[i] = NULL;
 			}
+		// Alternative commands to enter the GUI
+		} else if (strcmp(argv[i], "--gui") == 0 || strcmp(argv[i], "--settings") == 0) {
+				use_gui = true;
+				argv[i] = NULL;
 		} else if (valid_vmdir(argv[i])) {
 			vmdir = argv[i];
 			argv[i] = NULL;
@@ -877,6 +883,9 @@ int main(int argc, char **argv)
 
 	// Read preferences
 	PrefsInit(vmdir, argc, argv);
+	if (use_gui == -1)
+	    use_gui = !PrefsFindBool("nogui");
+	printf("Use Gui: %d\n", use_gui);
 
 #if __MACOSX__ && SDL_VERSION_ATLEAST(2,0,0)
 	// On Mac OS X hosts, SDL2 will create its own menu bar.  This is mostly OK,
@@ -2026,7 +2035,7 @@ static void sigsegv_handler(int sig, siginfo_t *sip, void *scp)
 		}
 
 		// In GUI mode, show error alert
-		if (!PrefsFindBool("nogui") || use_gui) {
+		if (use_gui) {
 			char str[256];
 			if (transfer_type == TYPE_LOAD || transfer_type == TYPE_STORE)
 				sprintf(str, GetString(STR_MEM_ACCESS_ERR), transfer_size == SIZE_BYTE ? "byte" : transfer_size == SIZE_HALFWORD ? "halfword" : "word", transfer_type == TYPE_LOAD ? GetString(STR_MEM_ACCESS_READ) : GetString(STR_MEM_ACCESS_WRITE), addr, r->pc(), r->gpr(24), r->gpr(1));
@@ -2205,7 +2214,7 @@ power_inst:		sprintf(str, GetString(STR_POWER_INSTRUCTION_ERR), r->pc(), r->gpr(
 		}
 
 		// In GUI mode, show error alert
-		if (!PrefsFindBool("nogui") || use_gui) {
+		if (use_gui) {
 			sprintf(str, GetString(STR_UNKNOWN_SEGV_ERR), r->pc(), r->gpr(24), r->gpr(1), opcode);
 			ErrorAlert(str);
 			QuitEmulator();
@@ -2348,14 +2357,14 @@ void ErrorAlert(const char *text)
 			return;
 	}
 #if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
-	if (PrefsFindBool("nogui") || !use_gui || x_display == NULL) {
+	if (!use_gui || x_display == NULL) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
 	VideoQuitFullScreen();
 	display_alert(win, STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
 #elif defined(ENABLE_GTK)
-	if (PrefsFindBool("nogui") || !use_gui) {
+	if (!use_gui) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
@@ -2379,13 +2388,13 @@ void WarningAlert(const char *text)
 			return;
 	}
 #if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
-	if (PrefsFindBool("nogui") || !use_gui || x_display == NULL) {
+	if (!use_gui || x_display == NULL) {
 		printf(GetString(STR_SHELL_WARNING_PREFIX), text);
 		return;
 	}
 	display_alert(STR_WARNING_ALERT_TITLE, STR_GUI_WARNING_PREFIX, STR_OK_BUTTON, text);
 #elif defined(ENABLE_GTK)
-	if (PrefsFindBool("nogui") || !use_gui) {
+	if (!use_gui) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
