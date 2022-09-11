@@ -37,6 +37,7 @@
 #include "xpram.h"
 #include "prefs.h"
 #include "prefs_editor.h"
+#include "vm_alloc.h"
 
 #define DEBUG 0
 #include "debug.h"
@@ -325,16 +326,102 @@ static void window_destroyed(void)
 	gtk_main_quit();
 }
 
+static bool can_mmap()
+{
+    bool ret = false;
+    if (vm_init() < 0) return false;
+    if (vm_acquire_fixed(0, 0x3000) >= 0)
+        ret = true;
+    vm_release(0, 0x3000);
+    vm_exit();
+    return ret;
+}
+
+static int elevate_for_mmap()
+{
+	int ret = 0;
+	char *child_stdout;
+	const char *exec;
+	char cmds[64] = "";
+	const char *cmd1;
+	const char *cmd2;
+	// Find a suitable superuser program
+	if (g_find_program_in_path("pkexec"))
+	{
+		exec = "pkexec";
+		cmd1 = "sh";
+		cmd2 = "-c";
+	}
+	else if (g_find_program_in_path("gksudo"))
+	{
+		exec = "gksudo";
+		cmd1 = "-D";
+		cmd2 = "SheepShaver";
+		strcat(cmds, "sh -c ");
+	}
+	else return 0;
+
+	// Find out which security mechanisms are in use
+	if(access("/proc/vm/mmap_min_addr", F_OK))
+		strcat(cmds, "sysctl vm.mmap_min_addr=0;");
+	if(g_find_program_in_path("setsebool"))
+		strcat(cmds, "setsebool mmap_low_allowed 1;");
+
+	// Run the command
+	g_autoptr(GError) g_error = NULL;
+	const gchar *argv[] = {exec, cmd1, cmd2, cmds, NULL};
+        ret = g_spawn_sync(NULL, (gchar **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL,
+                          NULL, &child_stdout, NULL, NULL, &g_error);
+        if(ret == 0)
+		printf("Elevation Error: %s\n", g_error->message);
+	return ret;
+}
+
+static void run_emulator()
+{
+	start_clicked = true;
+	read_settings();
+	SavePrefs();
+	gtk_widget_destroy(win);
+}
+
+static void on_elevate(GtkWidget *dialog, int response)
+{
+    if (response == GTK_RESPONSE_OK)
+    {
+        if(elevate_for_mmap() && can_mmap())
+            run_emulator();
+        else return;
+    }
+    else
+        gtk_widget_destroy(dialog);
+}
+
 // "Start" button clicked
 static void
 cb_start (GSimpleAction *action,
                  GVariant      *parameter,
                  gpointer       user_data)
 {
-	start_clicked = true;
-	read_settings();
-	SavePrefs();
-	gtk_widget_destroy(win);
+    if(can_mmap())
+        run_emulator();
+    else
+    {
+        const char *title = "Change security settings?";
+        const char *text = "SheepShaver needs to change security settings in order to run. \
+You will be asked for superuser permissions.";
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+                                                   GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                   GTK_MESSAGE_QUESTION,
+                                                   GTK_BUTTONS_CANCEL,
+                                                   title);
+        gtk_window_set_modal(GTK_WINDOW(dialog), true);
+        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
+        GtkWidget *button = gtk_dialog_add_button(GTK_DIALOG(dialog), "Continue", GTK_RESPONSE_OK);
+        gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
+        g_signal_connect(dialog, "response", G_CALLBACK(on_elevate), NULL);
+        gtk_widget_show(dialog);
+    }
 }
 
 // "Start" button clicked
