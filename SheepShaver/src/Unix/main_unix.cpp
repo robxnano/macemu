@@ -883,9 +883,9 @@ int main(int argc, char **argv)
 
 	// Read preferences
 	PrefsInit(vmdir, argc, argv);
+	// Only use nogui preference if not passed as command line argument
 	if (use_gui == -1)
 	    use_gui = !PrefsFindBool("nogui");
-	printf("Use Gui: %d\n", use_gui);
 
 #if __MACOSX__ && SDL_VERSION_ATLEAST(2,0,0)
 	// On Mac OS X hosts, SDL2 will create its own menu bar.  This is mostly OK,
