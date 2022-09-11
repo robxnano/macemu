@@ -435,10 +435,9 @@ cb_save_settings (GSimpleAction *action,
 }
 
 // "Quit" button clicked
-static void
-cb_quit (GSimpleAction *action,
-                 GVariant      *parameter,
-                 gpointer       user_data)
+static void cb_quit (GSimpleAction *action,
+                     GVariant *parameter,
+                     gpointer user_data)
 {
 	start_clicked = false;
 	gtk_widget_destroy(win);
@@ -451,10 +450,9 @@ static void dl_quit(GtkWidget *dialog)
 }
 
 // "About" selected
-static void
-mn_about (GSimpleAction *action,
-		GVariant *parameter,
-		gpointer user_data)
+static void mn_about (GSimpleAction *action,
+		              GVariant *parameter,
+		              gpointer user_data)
 {
 	char version[64];
 	sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
@@ -497,9 +495,6 @@ bool PrefsEditor(void)
 	menubuilder_ = gtk_builder_new_from_resource("/net/cebix/SheepShaver/data/menu.ui");
 	gtk_application_set_menubar(GTK_APPLICATION(app),
 				G_MENU_MODEL(gtk_builder_get_object(menubuilder_, "main-window-menu")));
-	// Get screen dimensions
-	screen_width = gdk_screen_width();
-	screen_height = gdk_screen_height();
 
 	// Create window
 	win = gtk_application_window_new(GTK_APPLICATION(app));
@@ -511,6 +506,19 @@ bool PrefsEditor(void)
 					 win);
 	g_signal_connect(GTK_WIDGET(win), "delete_event", G_CALLBACK(window_closed), NULL);
 	g_signal_connect(GTK_WIDGET(win), "destroy", G_CALLBACK(window_destroyed), NULL);
+
+    // Get screen dimensions
+#if GTK_CHECK_VERSION (3,22,0)
+	GdkMonitor *monitor = gdk_display_get_monitor(gdk_display_get_default(), 0);
+	GdkRectangle *geometry = new GdkRectangle;
+	gdk_monitor_get_geometry(monitor, geometry);
+	screen_width = geometry->width;
+	screen_height = geometry->height;
+	g_free(geometry);
+#else
+	screen_width = gdk_screen_width();
+	screen_height = gdk_screen_height();
+#endif
 
 	// Create window contents
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
