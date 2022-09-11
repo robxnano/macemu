@@ -35,7 +35,7 @@ if test "$DIE" -eq 1; then
 fi
 
 if test -z "$ACLOCAL_FLAGS"; then
-    ACLOCAL_FLAGS="-I `aclocal --print-ac-dir` -I `dirname $0`/m4"
+    ACLOCAL_FLAGS="-I `dirname $0`/m4 -I `aclocal --print-ac-dir`"
 fi
 
 aclocalinclude="$ACLOCAL_FLAGS"; \

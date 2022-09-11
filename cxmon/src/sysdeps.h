@@ -27,10 +27,6 @@
 
 #include "config.h"
 
-#ifndef STDC_HEADERS
-#error "You don't have ANSI C header files."
-#endif
-
 #ifdef HAVE_UNISTD_H
 # include <sys/types.h>
 # include <unistd.h>

@@ -640,17 +640,16 @@ int main(int argc, char **argv)
 #else
 	const bool can_map_all_memory = false;
 #endif
-	
 	// Try to allocate all memory from 0x0000, if it is not known to crash
 	if (can_map_all_memory && (vm_acquire_mac_fixed(0, RAMSize + 0x100000) == 0)) {
-		D(bug("Could allocate RAM and ROM from 0x0000\n"));
+		D(bug("Successfully allocated RAM and ROM from 0x0000\n"));
 		memory_mapped_from_zero = true;
 	}
 	
 #ifndef PAGEZERO_HACK
 	// Otherwise, just create the Low Memory area (0x0000..0x2000)
 	else if (vm_acquire_mac_fixed(0, 0x2000) == 0) {
-		D(bug("Could allocate the Low Memory globals\n"));
+		D(bug("Successfully allocated Low Memory Globals\n"));
 		lm_area_mapped = true;
 	}
 	
@@ -665,7 +664,13 @@ int main(int argc, char **argv)
 
 	// Create areas for Mac RAM and ROM
 #if REAL_ADDRESSING
-	if (memory_mapped_from_zero) {
+	if (!can_map_all_memory)
+		printf("Real addressing mode");
+	else if (memory_mapped_from_zero)
+		printf("Real addressing mode (%s)\n",
+		       memory_mapped_from_zero ?
+		       "memory mapped from zero" :
+		       "can map all memory");
 		RAMBaseHost = (uint8 *)0;
 		ROMBaseHost = RAMBaseHost + RAMSize;
 	}
@@ -692,6 +697,7 @@ int main(int argc, char **argv)
 #endif
 
 #if DIRECT_ADDRESSING
+	printf("Direct addressing mode\n");
 	// RAMBaseMac shall always be zero
 	MEMBaseDiff = (uintptr)RAMBaseHost;
 	RAMBaseMac = 0;

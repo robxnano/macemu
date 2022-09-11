@@ -22,7 +22,6 @@
 #define LAUNCHERPREFIX_H
 
 #define CONFIG_H
-#define STDC_HEADERS
 #define SIZEOF_DOUBLE 8
 #define SIZEOF_FLOAT 4
 #define SIZEOF_INT 4
