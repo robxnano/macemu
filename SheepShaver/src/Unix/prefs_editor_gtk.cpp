@@ -39,6 +39,10 @@
 #include "prefs_editor.h"
 #include "vm_alloc.h"
 
+#if defined(USE_SDL_AUDIO) || defined(USE_SDL_VIDEO)
+#include <SDL.h>
+#endif
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -58,6 +62,42 @@ static void create_serial_pane(GtkWidget *top);
 static void create_memory_pane(GtkWidget *top);
 static void create_jit_pane(GtkWidget *top);
 static void read_settings(void);
+
+#ifdef REAL_ADDRESSING
+const char* INFO_ADDRESSING = "Addressing mode: Real";
+#else
+const char* INFO_ADDRESSING = "Addressing mode: Direct";
+#endif
+
+#if defined(USE_SDL_AUDIO) && defined(USE_SDL_VIDEO)
+#if SDL_VERSION_ATLEAST(2,0,0)
+const char* INFO_VIDEO = "SDL 2 for audio";
+#else
+const char* INFO_VIDEO = "SDL 1.2 for audio";
+#endif
+const char* INFO_AUDIO = "video";
+#else
+#ifdef USE_SDL_AUDIO
+#if SDL_VERSION_ATLEAST(2,0,0)
+const char* INFO_AUDIO = "SDL 2 audio";
+#else
+const char* INFO_AUDIO = "SDL 1.2 audio";
+#endif
+#elif defined(ESD_AUDIO)
+const char* INFO_AUDIO = "ESD audio";
+#else
+const char* INFO_AUDIO = "no audio";
+#endif
+#ifdef USE_SDL_VIDEO
+#if SDL_VERSION_ATLEAST(2,0,0)
+const char* INFO_VIDEO = "SDL 2 video";
+#else
+const char* INFO_VIDEO = "SDL 1.2 video";
+#endif
+#else
+const char* INFO_VIDEO = "X11 video";
+#endif
+#endif
 
 
 /*
@@ -454,11 +494,15 @@ static void mn_about (GSimpleAction *action,
 		              GVariant *parameter,
 		              gpointer user_data)
 {
-	char version[64];
+    char sysinfo[512];
+    sprintf(sysinfo, "%s\nBuilt with %s and %s\n\
+© 1997-2008 Christian Bauer and Marc Hellwig", INFO_ADDRESSING, INFO_VIDEO, INFO_AUDIO);
+
+    	char version[64];
 	sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
-	const char *author[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", NULL};
+	const char *author[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", "Gwenole Beauchesne", NULL};
 				gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
-				"copyright", "© 1997-2008 Christian Bauer and Marc Hellwig",
+				"copyright", sysinfo,
 				"authors", author,
 				"comments", "Open source PowerMac emulator",
 				"website", "http://sheepshaver.cebix.net",

@@ -93,8 +93,7 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 			TimerReset();
 			EtherReset();
 			AudioReset();
-#ifdef ENABLE_SDL
-#if SDL_VERSION_ATLEAST(2,0,0)
+#ifdef ENABLE_SDL_AUDIO && SDL_MAJOR_VERSION >= 2
 			PlayStartupSound();
 #endif
 #endif

@@ -162,8 +162,6 @@
 // Interrupts in native mode?
 #define INTERRUPTS_IN_NATIVE_MODE 1
 
-GtkWindow *win;
-
 // Constants
 const char ROM_FILE_NAME[] = "ROM";
 const char ROM_FILE_NAME2[] = "Mac OS ROM";
@@ -736,6 +734,8 @@ static bool init_sdl()
 #endif
 
 #ifdef ENABLE_GTK
+GtkWindow *win;
+
 static void
 gtk_startup (GtkApplication *app)
 {
@@ -2340,7 +2340,8 @@ void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 						GetString(title_id), NULL);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
 	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
-	gtk_dialog_run(GTK_DIALOG(dialog));
+	g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
+	gtk_widget_show(dialog);
 	gtk_widget_destroy(dialog);
 	return;
 }
@@ -2364,14 +2365,14 @@ void ErrorAlert(const char *text)
 		return;
 	}
 	VideoQuitFullScreen();
-	display_alert(win, STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
+	//display_alert(win, STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
 #elif defined(ENABLE_GTK)
 	if (!use_gui) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
 	VideoQuitFullScreen();
-	display_alert(STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
+	//display_alert(STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
 #else
 	printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 #endif
