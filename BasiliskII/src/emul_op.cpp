@@ -93,9 +93,8 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 			TimerReset();
 			EtherReset();
 			AudioReset();
-#ifdef ENABLE_SDL_AUDIO && SDL_MAJOR_VERSION >= 2
+#if defined(ENABLE_SDL_AUDIO) && SDL_MAJOR_VERSION >= 2
 			PlayStartupSound();
-#endif
 #endif
 			// Create BootGlobs at top of memory
 			Mac_memset(RAMBaseMac + RAMSize - 4096, 0, 4096);
