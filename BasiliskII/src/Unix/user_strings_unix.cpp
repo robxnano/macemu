@@ -82,7 +82,8 @@ user_string_def platform_strings[] = {
 	{STR_DSPDEVICE_FILE_CTRL, "Audio Output Device"},
 	{STR_MIXERDEVICE_FILE_CTRL, "Audio Mixer Device"},
 
-	{STR_BROWSE_TITLE, "Browse file"},
+	{STR_BROWSE_TITLE, "Select file"},
+	{STR_BROWSE_FOLDER_TITLE, "Select folder"},
 	{STR_BROWSE_CTRL, "Browse..."},
 	{STR_INPUT_PANE_TITLE, "Keyboard/Mouse"},
 	{STR_KEYCODES_CTRL, "Use Raw Keycodes"},
@@ -95,6 +96,12 @@ user_string_def platform_strings[] = {
 	{STR_IGNORESEGV_CTRL, "Ignore Illegal Memory Accesses"},
 
 	{STR_NO_B2_EXE_FOUND, "Could not start %s (%s)."},
+	{STR_ABOUT_COPYRIGHT, "© 1997-2008 Christian Bauer et al."},
+	{STR_ABOUT_LICENSE, "Basilisk II comes with ABSOLUTELY NO WARRANTY. \
+This is free software, and you are welcome to redistribute it under the terms of the GNU General Public License."},
+	{STR_ABOUT_COMMENTS, "Open source 68k Mac emulator"},
+	{STR_ABOUT_WEBSITE, "http://basiliskii.cebix.net"},
+	{STR_ABOUT_WEBSITE_LABEL, "Website"},
 
 	{-1, NULL}	// End marker
 };

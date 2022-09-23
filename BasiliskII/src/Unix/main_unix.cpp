@@ -64,9 +64,6 @@ struct sigstate {
 #ifdef ENABLE_GTK
 # include <gtk/gtk.h>
 # include <gdk/gdk.h>
-# ifdef HAVE_GNOMEUI
-#  include <gnome.h>
-# endif
 # if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 #  include <X11/Xlib.h>
 # endif
@@ -414,10 +411,35 @@ static void usage(const char *prg_name)
 	exit(0);
 }
 
+#ifdef ENABLE_GTK
+GtkWindow *win;
+
+static void
+gtk_startup (GtkApplication *app)
+{
+	if (!PrefsEditor())
+		QuitEmulator();
+}
+
+static void
+gtk_activate (GtkApplication *app)
+{
+	g_assert (GTK_IS_APPLICATION (app));
+	win = gtk_application_get_active_window (app);
+	/* Ask the window manager/compositor to present the window. */
+    if (win != NULL)
+    	gtk_window_present (win);
+}
+#endif
+
 int main(int argc, char **argv)
 {
-#if defined(ENABLE_GTK) && !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
+#ifdef ENABLE_GTK
+	GtkApplication *app = NULL;
+	int ret;
+#if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 	XInitThreads();
+#endif
 #endif
 	const char *vmdir = NULL;
 	char str[256];
@@ -518,21 +540,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifdef ENABLE_GTK
-	if (!gui_connection) {
-#ifdef HAVE_GNOMEUI
-		// Init GNOME/GTK
-		char version[16];
-		sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
-		gnome_init("Basilisk II", version, argc, argv);
-#else
-		// Init GTK
-		gtk_set_locale();
-		gtk_init(&argc, &argv);
-#endif
-	}
-#endif
-
 	// Read preferences
 	PrefsInit(vmdir, argc, argv);
 
@@ -593,10 +600,17 @@ int main(int argc, char **argv)
 	// Init system routines
 	SysInit();
 
-	// Show preferences editor
-	if (!gui_connection && !PrefsFindBool("nogui"))
-		if (!PrefsEditor())
-			QuitEmulator();
+#ifdef ENABLE_GTK
+	if (!gui_connection) {
+		// Init GTK
+		app = gtk_application_new ("net.cebix.BasiliskII", G_APPLICATION_FLAGS_NONE);
+		g_set_prgname("BasiliskII");
+		g_signal_connect (app, "activate", G_CALLBACK (gtk_activate), NULL);
+		g_signal_connect (app, "startup", G_CALLBACK (gtk_startup), NULL);
+		g_application_register(G_APPLICATION (app), NULL, NULL);
+		ret = g_application_run (G_APPLICATION (app), argc, argv);
+	}
+#endif
 
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
@@ -664,13 +678,8 @@ int main(int argc, char **argv)
 
 	// Create areas for Mac RAM and ROM
 #if REAL_ADDRESSING
-	if (!can_map_all_memory)
-		printf("Real addressing mode");
-	else if (memory_mapped_from_zero)
-		printf("Real addressing mode (%s)\n",
-		       memory_mapped_from_zero ?
-		       "memory mapped from zero" :
-		       "can map all memory");
+	if (memory_mapped_from_zero)
+	{
 		RAMBaseHost = (uint8 *)0;
 		ROMBaseHost = RAMBaseHost + RAMSize;
 	}
@@ -1620,35 +1629,19 @@ static void dl_destroyed(void)
 	gtk_main_quit();
 }
 
-static void dl_quit(GtkWidget *dialog)
-{
-	gtk_widget_destroy(dialog);
-}
-
 void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 {
-	char str[256];
-	sprintf(str, GetString(prefix_id), text);
-
-	GtkWidget *dialog = gtk_dialog_new();
-	gtk_window_set_title(GTK_WINDOW(dialog), GetString(title_id));
-	gtk_container_border_width(GTK_CONTAINER(dialog), 5);
-	gtk_widget_set_uposition(GTK_WIDGET(dialog), 100, 150);
-	gtk_signal_connect(GTK_OBJECT(dialog), "destroy", GTK_SIGNAL_FUNC(dl_destroyed), NULL);
-
-	GtkWidget *label = gtk_label_new(str);
-	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), label, TRUE, TRUE, 0);
-
-	GtkWidget *button = gtk_button_new_with_label(GetString(button_id));
-	gtk_widget_show(button);
-	gtk_signal_connect_object(GTK_OBJECT(button), "clicked", GTK_SIGNAL_FUNC(dl_quit), GTK_OBJECT(dialog));
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->action_area), button, FALSE, FALSE, 0);
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
-	gtk_widget_grab_default(button);
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+						GTK_DIALOG_DESTROY_WITH_PARENT,
+						GTK_MESSAGE_ERROR,
+						GTK_BUTTONS_NONE,
+						GetString(title_id), NULL);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
+	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
+	g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
 	gtk_widget_show(dialog);
-
-	gtk_main();
+	gtk_widget_destroy(dialog);
+	return;
 }
 #endif
 

@@ -75,12 +75,10 @@ dnl External packages.
 AC_ARG_WITH(esd,             [  --with-esd              support ESD for sound under Linux/FreeBSD [default=yes]], [WANT_ESD=$withval], [WANT_ESD=yes])
 AC_ARG_WITH(gtk,             [  --with-gtk              use GTK user interface [default=yes]],
   [case "$withval" in
-   gtk1)      WANT_GTK="gtk";;
-   gtk|gtk2)  WANT_GTK="$withval";;
-   yes)       WANT_GTK="gtk2 gtk";;
-   *)         WANT_GTK="no";;
+   no)       WANT_GTK="no";;
+   *)         WANT_GTK="gtk3";;
    esac],
-  [WANT_GTK="gtk2 gtk"])
+  [WANT_GTK="gtk3"])
 AC_ARG_WITH(mon,             [  --with-mon              use mon as debugger [default=no]], [WANT_MON=$withval], [WANT_MON=no])
 
 AC_ARG_WITH(bincue,   
@@ -450,43 +448,19 @@ fi
 
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
-case "x$WANT_GTK" in
-xgtk2*)
-  AM_PATH_GTK_2_0(1.3.15, [
+if [[ "x$WANT_GTK" = "xgtk3" ]]; then
+  WANT_GTK=no
+  AM_PATH_GTK_3_0(3.14.5, [
     GUI_CFLAGS="$GTK_CFLAGS"
     GUI_LIBS="$GTK_LIBS"
-    WANT_GTK=gtk2
+    WANT_GTK=gtk3
   ], [
-    case "x${WANT_GTK}x" in
-    *gtkx)
-      AC_MSG_WARN([Could not find GTK+ 2.0, trying with GTK+ 1.2.])
-      WANT_GTK=gtk
-      ;;
-    *)
-      AC_MSG_WARN([Could not find GTK+, disabling user interface.])
-      WANT_GTK=no
-      ;;
-    esac
-  ])
-  ;;
-esac
-if [[ "x$WANT_GTK" = "xgtk" ]]; then
-  AM_PATH_GTK(1.2.0, [
-    GUI_CFLAGS="$GTK_CFLAGS"
-    GUI_LIBS="$GTK_LIBS"
-    B2_PATH_GNOMEUI([
-      AC_DEFINE(HAVE_GNOMEUI, 1, [Define if libgnomeui is available.])
-      GUI_CFLAGS="$GUI_CFLAGS $GNOMEUI_CFLAGS"
-      GUI_LIBS="$GUI_LIBS $GNOMEUI_LIBS"
-    ], [])
-  ], [
-    AC_MSG_WARN([Could not find GTK+, disabling user interface.])
-    WANT_GTK=no
+    AC_MSG_WARN([Could not find GTK+ 3, disabling user interface.])
   ])
 fi
 if [[ "x$WANT_GTK" != "xno" -a "x$WANT_STANDALONE_GUI" = "xno" ]]; then
   AC_DEFINE(ENABLE_GTK, 1, [Define if using GTK.])
-  UISRCS=prefs_editor_gtk.cpp
+  UISRCS="prefs_editor_gtk.cpp resources.cpp"
 fi
 AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
