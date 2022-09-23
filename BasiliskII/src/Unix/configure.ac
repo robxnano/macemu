@@ -3,7 +3,7 @@ dnl Written in 2002 by Christian Bauer et al.
 
 AC_INIT([Basilisk II],[1.0],[Christian.Bauer@uni-mainz.de],[BasiliskII])
 AC_CONFIG_SRCDIR(main_unix.cpp)
-AC_PREREQ([2.71])
+AC_PREREQ([2.61])
 AC_CONFIG_HEADERS([config.h])
 
 AC_USE_SYSTEM_EXTENSIONS

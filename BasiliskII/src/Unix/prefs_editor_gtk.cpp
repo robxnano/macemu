@@ -325,7 +325,6 @@ static int elevate_for_mmap()
                           NULL, &child_stdout, NULL, NULL, &g_error);
         if(ret == 0)
 		    printf("Elevation Error: %s\n", g_error->message);
-	g_object_unref(g_error);
 	return ret;
 }
 
@@ -942,13 +941,21 @@ extern "C" void cb_entry (GtkWidget *widget)
 // Display the info bar
 extern "C" void cb_infobar_show (GtkWidget *widget)
 {
+#if GTK_CHECK_VERSION(3,22,29)
     gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), true);
+#else
+    gtk_widget_show(GTK_WIDGET(widget));
+#endif
 }
 
 // Close the info bar
 extern "C" void cb_infobar_hide (GtkWidget *widget)
 {
+#if GTK_CHECK_VERSION(3,22,29)
     gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
+#else
+    gtk_widget_hide(GTK_WIDGET(widget));
+#endif
 }
 
 // Read and convert graphics preferences
