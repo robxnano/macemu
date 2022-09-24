@@ -173,58 +173,68 @@ extern "C" void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 // User changed a file entry setting
 static void cb_file_entry(GtkEntry *entry, char *pref)
 {
-    PrefsReplaceString(pref, gtk_entry_get_text(entry));
+	PrefsReplaceString(pref, gtk_entry_get_text(entry));
 }
 
 // User changed one of the screen mode settings
 extern "C" void cb_screen_mode(GtkWidget *widget)
 {
-    const char *str_x = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_x));
-    int int_x = atoi(str_x);
-    if (int_x < 0) int_x = 0;
+	const char *str_x = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_x));
+	int int_x = atoi(str_x);
+	if (int_x < 0) int_x = 0;
 
-    const char *str_y = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_y));
-    int int_y = atoi(str_y);
-    if (int_y < 0) int_y = 0;
+	const char *str_y = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_y));
+	int int_y = atoi(str_y);
+	if (int_y < 0) int_y = 0;
 
-    char screen[256];
+	char screen[256];
 #ifdef ENABLE_FBDEV_DGA
-    const char *str = gtk_combo_box_get_active(screen_mode) ? "fbdev/%d/%d" : "win/%d/%d";
+	const char *str = gtk_combo_box_get_active(screen_mode) ? "fbdev/%d/%d" : "win/%d/%d";
 #else
-    const char *str = gtk_combo_box_get_active(screen_mode) ? "dga/%d/%d" : "win/%d/%d";
+	const char *str = gtk_combo_box_get_active(screen_mode) ? "dga/%d/%d" : "win/%d/%d";
 #endif
-    sprintf(screen, str, int_x, int_y);
-    PrefsReplaceString("screen", screen);
+	sprintf(screen, str, int_x, int_y);
+	PrefsReplaceString("screen", screen);
 	// Old prefs are now migrated
 	PrefsRemoveItem("windowmodes");
 	PrefsRemoveItem("screenmodes");
 }
 
-static void connect_ramsize_combo_box(void)
+static void set_ramsize_combo_box(void)
 {
-    const char *name = "ramsize";
-    int size_mb = PrefsFindInt32(name) >> 20;
-    GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, name));
-    char id[32];
-    snprintf(id, 32, "%d", size_mb);
-    if(!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id))
-    {
-        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(combo), id, id);
-        gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id);
-    }
+	const char *name = "ramsize";
+	int size_mb = PrefsFindInt32(name) >> 20;
+	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, name));
+	char id[32];
+	snprintf(id, 32, "%d", size_mb);
+	if(!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id))
+	{
+		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(combo), id, id);
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id);
+	}
 }
 
-static void connect_hotkey_buttons(void)
+static void set_hotkey_buttons(void)
 {
-    GtkToggleButton *ctrl = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "ctrl-hotkey"));
-    GtkToggleButton *alt = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "alt-hotkey"));
-    GtkToggleButton *super = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "super-hotkey"));
-    int32 hotkey = PrefsFindInt32("hotkey");
-    if (hotkey == 0)
-        hotkey = 1;
-    gtk_toggle_button_set_active(ctrl, hotkey & 1);
-    gtk_toggle_button_set_active(alt, hotkey & 2);
-    gtk_toggle_button_set_active(super, hotkey & 4);
+	GtkToggleButton *ctrl = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "ctrl-hotkey"));
+	GtkToggleButton *alt = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "alt-hotkey"));
+	GtkToggleButton *super = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "super-hotkey"));
+	int32 hotkey = PrefsFindInt32("hotkey");
+	if (hotkey == 0)
+		hotkey = 1;
+	gtk_toggle_button_set_active(ctrl, hotkey & 1);
+	gtk_toggle_button_set_active(alt, hotkey & 2);
+	gtk_toggle_button_set_active(super, hotkey & 4);
+}
+
+static void set_cpu_combo_box (void)
+{
+	GtkComboBox *combo = GTK_COMBO_BOX(gtk_builder_get_object(builder, "cpu"));
+	int32 cpu = PrefsFindInt32("cpu");
+	bool fpu = PrefsFindBool("fpu");
+	char id[32];
+	sprintf(id, "%d", (cpu << 1 | fpu));
+	gtk_combo_box_set_active_id(combo, id);
 }
 
 static GtkWidget *add_combo_box_values(GList *entries, const char *pref)
@@ -267,6 +277,11 @@ static void window_destroyed(void)
 // Emulator is ready to start
 static void run_emulator()
 {
+	if(access(PrefsFindString("rom"), F_OK) != 0)
+	{
+		cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "rom-error-bar")));
+		return;
+	}
 	start_clicked = true;
 	save_volumes();
 	SavePrefs();
@@ -277,13 +292,13 @@ static void run_emulator()
 // Checks if mmap from zero is possible
 static bool can_mmap_real()
 {
-    bool ret = false;
-    if (vm_init() < 0) return false;
-    if (vm_acquire_fixed(0, 0x3000) >= 0)
-        ret = true;
-    vm_release(0, 0x3000);
-    vm_exit();
-    return ret;
+	bool ret = false;
+	if (vm_init() < 0) return false;
+	if (vm_acquire_fixed(0, 0x3000) >= 0)
+		ret = true;
+	vm_release(0, 0x3000);
+	vm_exit();
+	return ret;
 }
 
 /* Attempts to get superuser permissions to change security settings
@@ -321,24 +336,24 @@ static int elevate_for_mmap()
 	// Run the command
 	GError *g_error = NULL;
 	const gchar *argv[] = {exec, cmd1, cmd2, cmds, NULL};
-        ret = g_spawn_sync(NULL, (gchar **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL,
-                          NULL, &child_stdout, NULL, NULL, &g_error);
-        if(ret == 0)
-		    printf("Elevation Error: %s\n", g_error->message);
+		ret = g_spawn_sync(NULL, (gchar **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL,
+		                   NULL, &child_stdout, NULL, NULL, &g_error);
+		if(ret == 0)
+			printf("Elevation Error: %s\n", g_error->message);
 	return ret;
 }
 
 // User responded to the pkexec dialog
 extern "C" void cb_elevate_response(GtkWidget *dialog, int response)
 {
-    if (response == GTK_RESPONSE_OK)
-    {
-        if(elevate_for_mmap() && can_mmap_real())
-            run_emulator();
-        else
-            cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "elevate-error-bar")));
-    }
-    gtk_widget_destroy(dialog);
+	if (response == GTK_RESPONSE_OK)
+	{
+		if(elevate_for_mmap() && can_mmap_real())
+			run_emulator();
+		else
+			cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "elevate-error-bar")));
+	}
+	gtk_widget_destroy(dialog);
 }
 #endif
 
@@ -346,32 +361,33 @@ extern "C" void cb_elevate_response(GtkWidget *dialog, int response)
 static void cb_start (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
 #if REAL_ADDRESSING && defined(__linux__)
-    if(!can_mmap_real())
-    {
-        const char *title = "Change security settings?";
-        char text[256];
-        sprintf(text, "%s needs to change security settings in order to run.\n\
+	if(!can_mmap_real())
+	{
+		const char *title = "Change security settings?";
+		char text[256];
+		sprintf(text, "%s needs to change security settings in order to run.\n\
 You will be asked for superuser permissions.", GetString(STR_WINDOW_TITLE));
-        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
-                                                   (GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
-                                                   GTK_MESSAGE_QUESTION,
-                                                   GTK_BUTTONS_CANCEL,
-                                                   title);
-        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), (const char*) &text);
-        GtkWidget *button = gtk_dialog_add_button(GTK_DIALOG(dialog), "Continue", GTK_RESPONSE_OK);
-        gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
-        g_signal_connect(dialog, "response", G_CALLBACK(cb_elevate_response), NULL);
-        gtk_widget_show(dialog);
-    }
-    else
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+		                    (GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+		                    GTK_MESSAGE_QUESTION,
+		                    GTK_BUTTONS_CANCEL,
+		                    title);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), (const char*) &text);
+		GtkWidget *button = gtk_dialog_add_button(GTK_DIALOG(dialog), "Continue", GTK_RESPONSE_OK);
+		gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
+		g_signal_connect(dialog, "response", G_CALLBACK(cb_elevate_response), NULL);
+		gtk_widget_show(dialog);
+	}
+	else
 #endif
-        run_emulator();
+		run_emulator();
 }
 
 // "Save Settings" menu item clicked
 static void
 cb_save_settings (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
+	save_volumes();
 	SavePrefs();
 }
 
@@ -392,70 +408,71 @@ extern "C" void dl_quit(GtkWidget *dialog)
 // Set initial widget states
 static void set_initial_prefs(void)
 {
-    const char *check_boxes[] = {
-    "nocdrom", "nosound", "udptunnel", "keycodes", "nogui", "ignoresegv", "idlewait",
-    "jit", "jitfpu", "jitinline", "jitlazyflush","jit68k", "gfxaccel", "swap_opt_cmd"};
-    for (int i = 0; i < 13; i++)
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, check_boxes[i])),
-                                     PrefsFindBool(check_boxes[i]));
+	const char *check_boxes[] = {
+		"nocdrom", "nosound", "udptunnel", "keycodes", "nogui", "ignoresegv", "idlewait",
+		"jit", "jitfpu", "jitinline", "jitlazyflush","jit68k", "gfxaccel", "swap_opt_cmd"};
+	for (int i = 0; i < 14; i++)
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, check_boxes[i])),
+		                             PrefsFindBool(check_boxes[i]));
+	cb_swap_opt_cmd(NULL);
 
-    const char *entries[] = {
-    "extfs", "dsp", "mixer", "keycodefile", "scsi0", "scsi1", "scsi2", "scsi3", "scsi4", "scsi5", "scsi6", "rom"};
-    for (int i = 0; i < 12; i++)
-        if (PrefsFindString(entries[i]) != NULL)
-            gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(builder, entries[i])),
-                               PrefsFindString(entries[i]));
+	const char *entries[] = {
+		"extfs", "dsp", "mixer", "keycodefile", "scsi0", "scsi1", "scsi2", "scsi3", "scsi4", "scsi5", "scsi6", "rom"};
+	for (int i = 0; i < 12; i++)
+		if (PrefsFindString(entries[i]) != NULL)
+			gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(builder, entries[i])),
+			                   PrefsFindString(entries[i]));
 
-    const char *spin_buttons[] = {"mousewheellines", "udpport"};
-    for (int i = 0; i < 2; i++)
-        gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, spin_buttons[i])),
-                                  PrefsFindInt32(spin_buttons[i]));
+	const char *spin_buttons[] = {"mousewheellines", "udpport"};
+	for (int i = 0; i < 2; i++)
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, spin_buttons[i])),
+		                          PrefsFindInt32(spin_buttons[i]));
 
-    const char *id_combos[] = {"bootdriver", "frameskip", "mousewheelmode", "modelid", "cpu"};
-    for (int i = 0; i < 5; i++)
-    {
-        char str[32];
-        sprintf(str, "%d", PrefsFindInt32(id_combos[i]));
-        gtk_combo_box_set_active_id(GTK_COMBO_BOX(gtk_builder_get_object(builder, id_combos[i])), str);
-    }
+	const char *id_combos[] = {"bootdriver", "frameskip", "mousewheelmode", "modelid"};
+	for (int i = 0; i < 4; i++)
+	{
+		char str[32];
+		sprintf(str, "%d", PrefsFindInt32(id_combos[i]));
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(gtk_builder_get_object(builder, id_combos[i])), str);
+	}
 
-    const char *text_combos[] = {"seriala", "serialb", "ether", "ramsize"};
-    GtkComboBoxText *combo;
-    for (int i = 0; i < 4; i++)
-    {
-        combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, text_combos[i]));
-        if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), PrefsFindString(text_combos[i])))
-        {
-            gtk_combo_box_text_prepend(combo, PrefsFindString(text_combos[i]), PrefsFindString(text_combos[i]));
-            gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), PrefsFindString(text_combos[i]));
-        }
-    }
+	const char *text_combos[] = {"ramsize"};
+	GtkComboBoxText *combo;
+	for (int i = 0; i < 1; i++)
+	{
+		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, text_combos[i]));
+		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), PrefsFindString(text_combos[i])))
+		{
+			gtk_combo_box_text_prepend(combo, PrefsFindString(text_combos[i]), PrefsFindString(text_combos[i]));
+			gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), PrefsFindString(text_combos[i]));
+		}
+	}
 
-    const char *int_combos[] = {"jitcachesize"};
-    for (int i = 0; i < 1; i++)
-    {
-        char str[32];
-        combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, int_combos[i]));
-        sprintf(str, "%d", PrefsFindInt32(int_combos[i]));
-        if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str))
-        {
-            gtk_combo_box_text_prepend(combo, str, str);
-            gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str);
-        }
-    }
+	const char *int_combos[] = {"jitcachesize"};
+	for (int i = 0; i < 1; i++)
+	{
+		char str[32];
+		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, int_combos[i]));
+		sprintf(str, "%d", PrefsFindInt32(int_combos[i]));
+		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str))
+		{
+			gtk_combo_box_text_prepend(combo, str, str);
+			gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str);
+		}
+	}
 }
 
 // "About" selected
 static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-    char sysinfo[512];
-    sprintf(sysinfo, "%s\nBuilt with %s and %s\n\%s",
-            INFO_ADDRESSING,
-            INFO_VIDEO,
-            INFO_AUDIO,
-            GetString(STR_ABOUT_COPYRIGHT));
+	char sysinfo[512];
+	sprintf(sysinfo, "%s\nBuilt with %s and %s\n\%s",
+	        INFO_ADDRESSING,
+	        INFO_VIDEO,
+	        INFO_AUDIO,
+	        GetString(STR_ABOUT_COPYRIGHT));
 
-    char version[64];
+   	char version[64];
 	sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
 	const char *authors[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", "Gwenole Beauchesne", NULL};
 				gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
@@ -469,7 +486,7 @@ static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_
 #ifdef SHEEPSHAVER
 				"logo-icon-name", "net.cebix.SheepShaver",
 #else
-                "logo-icon-name", "net.cebix.BasiliskII",
+				"logo-icon-name", "net.cebix.BasiliskII",
 #endif
 				NULL);
 }
@@ -488,9 +505,9 @@ static void cb_help_overlay (GSimpleAction *action, GVariant *parameter, gpointe
 
 // Action entries (used in menus and buttons)
 static GActionEntry win_entries[] = {
-    { "add-volume", cb_add_volume },
-    { "create-volume", cb_create_volume },
-    { "remove-volume", cb_remove_volume },
+	{ "add-volume", cb_add_volume },
+	{ "create-volume", cb_create_volume },
+	{ "remove-volume", cb_remove_volume },
 	{ "start", cb_start },
 	{ "save-settings", cb_save_settings },
 	{ "zap-pram", mn_zap_pram },
@@ -501,16 +518,31 @@ static GActionEntry win_entries[] = {
 // Hide widgets which aren't applicable to this emulator
 static void hide_widget(const char *name)
 {
-    GtkWidget *widget = GTK_WIDGET(gtk_builder_get_object(builder, name));
-    gtk_widget_hide(widget);
+	GtkWidget *widget = GTK_WIDGET(gtk_builder_get_object(builder, name));
+	gtk_widget_hide(widget);
 }
 
 // Bind the sensitivity of a widget to the active property of another
 static void bind_sensitivity(const char *source_name, const char *target_name, GBindingFlags flags = G_BINDING_DEFAULT)
 {
-    GtkWidget *source = GTK_WIDGET(gtk_builder_get_object(builder, source_name));
-    GtkWidget *target = GTK_WIDGET(gtk_builder_get_object(builder, target_name));
-    g_object_bind_property(source, "active", target, "sensitive", GBindingFlags(flags | G_BINDING_SYNC_CREATE));
+	GtkWidget *source = GTK_WIDGET(gtk_builder_get_object(builder, source_name));
+	GtkWidget *target = GTK_WIDGET(gtk_builder_get_object(builder, target_name));
+	g_object_bind_property(source, "active", target, "sensitive", GBindingFlags(flags | G_BINDING_SYNC_CREATE));
+}
+
+static void set_file_menu(GtkApplication *app)
+{
+	GtkBuilder *menubuilder = gtk_builder_new_from_file("ui/menu.ui");
+	gtk_application_set_menubar(app, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu")));
+	g_object_unref(menubuilder);
+}
+
+static void set_help_overlay(GtkApplicationWindow *win)
+{
+	GtkBuilder *helpbuilder = gtk_builder_new_from_file("ui/help-overlay.ui");
+	gtk_application_window_set_help_overlay(win,
+	                                        GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
+	g_object_unref(helpbuilder);
 }
 
 // Main
@@ -523,31 +555,29 @@ bool PrefsEditor(void)
 		return false;
 	}
 	builder = gtk_builder_new_from_file("ui/prefs-editor.ui");
-
-	GtkBuilder *menubuilder = gtk_builder_new_from_file("ui/menu.ui");
-	gtk_application_set_menubar(GTK_APPLICATION(app), G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu")));
-    g_object_unref(menubuilder);
+	set_file_menu(GTK_APPLICATION(app));
 
 	// Create window
 	win = GTK_WIDGET(gtk_builder_get_object(builder, "prefs-editor"));
 	g_assert(GTK_IS_APPLICATION_WINDOW (win));
-    gtk_application_add_window(GTK_APPLICATION(app), GTK_WINDOW(win));
-    set_initial_prefs();
-    gtk_builder_connect_signals(builder, NULL);
+	gtk_application_add_window(GTK_APPLICATION(app), GTK_WINDOW(win));
+	set_initial_prefs();
+	set_ramsize_combo_box();
+	set_hotkey_buttons();
+	set_cpu_combo_box();
+	gtk_builder_connect_signals(builder, NULL);
 
-    GtkBuilder *helpbuilder = gtk_builder_new_from_file("ui/help-overlay.ui");
-    gtk_application_window_set_help_overlay(GTK_APPLICATION_WINDOW(win),
-                                            GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
+	set_help_overlay(GTK_APPLICATION_WINDOW(win));
 
 	gtk_window_set_title(GTK_WINDOW(win), GetString(STR_PREFS_TITLE));
 	g_action_map_add_action_entries (G_ACTION_MAP (win),
 					 win_entries, G_N_ELEMENTS (win_entries),
 					 win);
-    g_simple_action_set_enabled(G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP (win), "remove-volume")), false);
+	g_simple_action_set_enabled(G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP (win), "remove-volume")), false);
 	g_signal_connect(GTK_WIDGET(win), "delete_event", G_CALLBACK(window_closed), NULL);
 	g_signal_connect(GTK_WIDGET(win), "destroy", G_CALLBACK(window_destroyed), NULL);
 
-    // Get screen dimensions
+	// Get screen dimensions
 #if GTK_CHECK_VERSION (3,22,0)
 	GdkMonitor *monitor = gdk_display_get_monitor(gdk_display_get_default(), 0);
 	GdkRectangle *geometry = new GdkRectangle;
@@ -568,13 +598,11 @@ bool PrefsEditor(void)
 	GtkWidget *jit = GTK_WIDGET(gtk_builder_get_object(builder, "jit"));
 	GtkWidget *keycodes = GTK_WIDGET(gtk_builder_get_object(builder, "keycodes"));
 	get_graphics_settings();
-	connect_ramsize_combo_box();
-	connect_hotkey_buttons();
 	bind_sensitivity("mousewheelmode", "mousewheellines");
 	bind_sensitivity("keycodes", "keycodefile");
 	bind_sensitivity("keycodes", "keycodefile-browse");
 #ifdef SHEEPSHAVER
-    hide_widget("scsi-pane");
+	hide_widget("scsi-pane");
 	bind_sensitivity("jit", "jitfpu");
 	hide_widget("udptunnel");
 	hide_widget("jitcachesize");
@@ -582,8 +610,8 @@ bool PrefsEditor(void)
 	hide_widget("jitlazyflush");
 	hide_widget("jitinline");
 #else
-    hide_widget("gfxaccel");
-    hide_widget("jit68k");
+	hide_widget("gfxaccel");
+	hide_widget("jit68k");
 	bind_sensitivity("udptunnel", "udpport");
 	bind_sensitivity("jit", "jitfpu");
 	bind_sensitivity("jit", "jitlazyflush");
@@ -593,13 +621,13 @@ bool PrefsEditor(void)
 	bind_sensitivity("udptunnel", "ether", G_BINDING_INVERT_BOOLEAN);
 #endif
 #ifndef ENABLE_SDL_AUDIO
-    hide_widget("dsp");
-    hide_widget("mixer");
-    hide_widget("dsp-label");
-    hide_widget("mixer-label");
+	hide_widget("dsp");
+	hide_widget("mixer");
+	hide_widget("dsp-label");
+	hide_widget("mixer-label");
 #endif
-    if (!is_jit_capable())
-        gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "jit-pane")), false);
+	if (!is_jit_capable())
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "jit-pane")), false);
 	GList *glist = add_serial_names();
 	add_combo_box_values(glist, "seriala");
 	add_combo_box_values(glist, "serialb");
@@ -621,6 +649,7 @@ bool PrefsEditor(void)
 enum {
 	COLUMN_PATH,
 	COLUMN_SIZE,
+	COLUMN_READONLY,
 	N_COLUMNS
 };
 
@@ -643,6 +672,15 @@ static const char* get_file_size (GFile *file)
 	g_object_unref(info);
 }
 
+static bool has_file_ext (GFile *file, const char *ext)
+{
+	char *str = g_file_get_path(file);
+	char *file_ext = strrchr(str, '.');
+	if (file_ext == NULL)
+		return 0;
+	return (strncmp(file_ext, ext, 3) == 0);
+}
+
 // User selected a volume to add
 static void cb_add_volume_response (GtkWidget *chooser, int response)
 {
@@ -653,6 +691,7 @@ static void cb_add_volume_response (GtkWidget *chooser, int response)
 		gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
 				COLUMN_PATH, g_file_get_path(volume),
 				COLUMN_SIZE, get_file_size(volume),
+				COLUMN_READONLY, has_file_ext(volume, ".iso"),
 				-1);
 		g_object_unref(volume);
 	}
@@ -747,10 +786,10 @@ static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpoint
 // Enables and disables the "Remove" button depending on whether a volume is selected
 static void cb_remove_enable(GtkWidget *widget)
 {
-    bool enable = false;
+	bool enable = false;
 	if (selection != NULL && gtk_tree_selection_count_selected_rows(selection))
-	    enable = true;
-    g_simple_action_set_enabled(G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP (win), "remove-volume")), enable);
+		enable = true;
+	g_simple_action_set_enabled(G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP (win), "remove-volume")), enable);
 }
 
 // "Remove" button clicked
@@ -763,6 +802,23 @@ static void cb_remove_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	}
 }
 
+static void cb_readonly (GtkCellRendererToggle *cell, gchar *path_str, gpointer data)
+{
+	GtkTreeIter iter;
+	GtkTreePath *path = gtk_tree_path_new_from_string (path_str);
+	gboolean read_only;
+	gboolean new_value = true;
+	char *name;
+
+	gtk_tree_model_get_iter (volume_store, &iter, path);
+	gtk_tree_model_get (volume_store, &iter, COLUMN_READONLY, &read_only, -1);
+
+	read_only ^= 1;
+
+	gtk_list_store_set (GTK_LIST_STORE (volume_store), &iter, COLUMN_READONLY, read_only, -1);
+	gtk_tree_path_free (path);
+}
+
 // Save volumes from list store to prefs
 static void save_volumes (void)
 {
@@ -771,10 +827,21 @@ static void save_volumes (void)
 		PrefsRemoveItem("disk");
 	if(gtk_tree_model_get_iter_first(volume_store, &toplevel))
 	{
+		const char *path;
 		do {
-			char *item;
-			gtk_tree_model_get(volume_store, &toplevel, 0, &item, -1);
-			PrefsAddString("disk", item);
+			gboolean read_only = true;
+			gtk_tree_model_get(volume_store, &toplevel, COLUMN_READONLY, &read_only, -1);
+			gtk_tree_model_get(volume_store, &toplevel, COLUMN_PATH, &path, -1);
+			if (read_only)
+			{
+				char str[256];
+				snprintf(str, 255, "*%s", path);
+				PrefsAddString("disk", str);
+			}
+			else
+			{
+				PrefsAddString("disk", path);
+			}
 		}
 		while (gtk_tree_model_iter_next(volume_store, &toplevel));
 	}
@@ -785,13 +852,19 @@ static GtkTreeModel *get_volumes (void)
 {
 	const char *str;
 	int32 index = 0;
-	volume_store = GTK_TREE_MODEL(gtk_list_store_new(N_COLUMNS, G_TYPE_STRING, G_TYPE_STRING));
+	volume_store = GTK_TREE_MODEL(gtk_list_store_new(N_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN));
 	while ((str = (const char *)PrefsFindString("disk", index++)) != NULL)
 	{
+		int read_only = 0;
+		if (strncmp(str, "*", 1) == 0)
+		{
+			read_only = 1;
+		}
 		gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
-        	gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
-				COLUMN_PATH, str,
-				COLUMN_SIZE, get_file_size(g_file_new_for_path(str)),
+			gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
+				COLUMN_PATH, str + read_only,
+				COLUMN_SIZE, get_file_size(g_file_new_for_path(str + read_only)),
+				COLUMN_READONLY, read_only,
 				-1);
 	}
 	return volume_store;
@@ -816,6 +889,15 @@ static GtkWidget *create_tree_view (void)
 	gtk_tree_view_column_add_attribute(col, renderer, "text", COLUMN_PATH);
 
 	col = gtk_tree_view_column_new();
+	gtk_tree_view_column_set_title(col, "ISO");
+	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+	renderer = gtk_cell_renderer_toggle_new();
+	g_signal_connect (renderer, "toggled",
+	                  G_CALLBACK (cb_readonly), NULL);
+	gtk_tree_view_column_pack_start(col, renderer, TRUE);
+	gtk_tree_view_column_add_attribute(col, renderer, "active", COLUMN_READONLY);
+
+	col = gtk_tree_view_column_new();
 	gtk_tree_view_column_set_title(col, "Size");
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
 	renderer = gtk_cell_renderer_text_new();
@@ -828,9 +910,9 @@ static GtkWidget *create_tree_view (void)
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
 	gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
-    g_signal_connect(selection, "changed", G_CALLBACK(cb_remove_enable), NULL);
+	g_signal_connect(selection, "changed", G_CALLBACK(cb_remove_enable), NULL);
 
-    return view;
+	return view;
 }
 
 /*
@@ -875,76 +957,87 @@ static bool is_fbdev_dga_mode = false;
 // User changed the hotkey combination
 extern "C" void cb_hotkey (GtkWidget *widget)
 {
-    GtkToggleButton *ctrl = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "ctrl-hotkey"));
-    GtkToggleButton *alt = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "alt-hotkey"));
-    GtkToggleButton *super = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "super-hotkey"));
-    int hotkey = gtk_toggle_button_get_active(ctrl) |
-                 gtk_toggle_button_get_active(alt) << 1 |
-                 gtk_toggle_button_get_active(super) << 2;
-    if (hotkey == 0)
-        return;
-    PrefsReplaceInt32("hotkey", hotkey);
+	GtkToggleButton *ctrl = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "ctrl-hotkey"));
+	GtkToggleButton *alt = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "alt-hotkey"));
+	GtkToggleButton *super = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "super-hotkey"));
+	int hotkey = gtk_toggle_button_get_active(ctrl) |
+	             gtk_toggle_button_get_active(alt) << 1 |
+	             gtk_toggle_button_get_active(super) << 2;
+	if (hotkey == 0)
+		return;
+	PrefsReplaceInt32("hotkey", hotkey);
 }
 
 // Saves the new ram size preference
 extern "C" void cb_ramsize (GtkWidget *widget)
 {
-    int size_bytes = atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget))) << 20;
+	int size_bytes = atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget))) << 20;
 	PrefsReplaceInt32("ramsize", size_bytes);
+}
+
+// Saves the new cpu and fpu preferences
+extern "C" void cb_cpu (GtkWidget *widget)
+{
+	int value = atoi(gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget)));
+	int cpu = value >> 1;
+	bool fpu = false;
+	if (value & 1)
+		fpu = true;
+	PrefsReplaceInt32("cpu", cpu);
+	PrefsReplaceBool("fpu", fpu);
 }
 
 // Save the id of the selected combo box item to its associated preference
 extern "C" void cb_combo_int (GtkWidget *widget)
 {
-    PrefsReplaceInt32(gtk_widget_get_name(widget), atoi(gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget))));
+	PrefsReplaceInt32(gtk_widget_get_name(widget), atoi(gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget))));
 }
 
 extern "C" void cb_combo_str (GtkWidget *widget)
 {
-    PrefsReplaceString(gtk_widget_get_name(widget), gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget)));
+	PrefsReplaceString(gtk_widget_get_name(widget), gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget)));
 }
 
 // Save the value of the combo box entry to its associated preference
 extern "C" void cb_combo_entry_int (GtkWidget *widget)
 {
-    PrefsReplaceInt32(gtk_widget_get_name(widget),
-                      atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget))));
+	PrefsReplaceInt32(gtk_widget_get_name(widget),
+	                  atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget))));
 }
 
 extern "C" void cb_combo_entry_str (GtkWidget *widget)
 {
-    PrefsReplaceString(gtk_widget_get_name(widget),
-                       gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget)));
+	PrefsReplaceString(gtk_widget_get_name(widget),
+	                   gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget)));
 }
 
 // Save the value of the spin button to its associated preference
 extern "C" void cb_spin_button (GtkWidget *widget)
 {
-    PrefsReplaceInt32(gtk_widget_get_name(widget), gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)));
+	PrefsReplaceInt32(gtk_widget_get_name(widget), gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)));
 }
 
 // Save the value of the check box to its associated preference
 extern "C" void cb_check_box (GtkWidget *widget)
 {
-    PrefsReplaceBool(gtk_widget_get_name(widget), gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+	PrefsReplaceBool(gtk_widget_get_name(widget), gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
 }
 
 // Save the contents of the entry to its associated preference
 extern "C" void cb_entry (GtkWidget *widget)
 {
-    if (gtk_entry_get_text_length(GTK_ENTRY(widget)))
-    	PrefsReplaceString(gtk_widget_get_name(widget), gtk_entry_get_text(GTK_ENTRY(widget)));
-    else
-        PrefsRemoveItem(gtk_widget_get_name(widget));
+	if (gtk_entry_get_text_length(GTK_ENTRY(widget)))
+		PrefsReplaceString(gtk_widget_get_name(widget), gtk_entry_get_text(GTK_ENTRY(widget)));
+	else
+		PrefsRemoveItem(gtk_widget_get_name(widget));
 }
 
 // Display the info bar
 extern "C" void cb_infobar_show (GtkWidget *widget)
 {
+	gtk_widget_show(GTK_WIDGET(widget));
 #if GTK_CHECK_VERSION(3,22,29)
-    gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), true);
-#else
-    gtk_widget_show(GTK_WIDGET(widget));
+	gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), true);
 #endif
 }
 
@@ -952,10 +1045,19 @@ extern "C" void cb_infobar_show (GtkWidget *widget)
 extern "C" void cb_infobar_hide (GtkWidget *widget)
 {
 #if GTK_CHECK_VERSION(3,22,29)
-    gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
+	gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
 #else
-    gtk_widget_hide(GTK_WIDGET(widget));
+	gtk_widget_hide(GTK_WIDGET(widget));
 #endif
+}
+
+extern "C" void cb_swap_opt_cmd (GtkWidget *widget)
+{
+	bool swapped = PrefsFindBool("swap_opt_cmd");
+	GtkLabel *opt_label = GTK_LABEL(gtk_builder_get_object(builder, "opt-label"));
+	GtkLabel *cmd_label = GTK_LABEL(gtk_builder_get_object(builder, "cmd-label"));
+	gtk_label_set_text(opt_label, swapped ? "Super" : "Alt");
+	gtk_label_set_text(cmd_label, swapped ? "Alt" : "Super");
 }
 
 // Read and convert graphics preferences
@@ -964,9 +1066,9 @@ static void get_graphics_settings (void)
 	display_type = DISPLAY_WINDOW;
 	dis_width = 640;
 	dis_height = 480;
-    screen_mode = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-mode"));
-    screen_x = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-x"));
-    screen_y = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-y"));
+	screen_mode = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-mode"));
+	screen_x = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-x"));
+	screen_y = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-y"));
 
 	const char *str = PrefsFindString("screen");
 	if (str) {
@@ -1024,20 +1126,20 @@ static void get_graphics_settings (void)
 		dis_height = 0;
 
 	if(display_type == DISPLAY_SCREEN)
-	    gtk_combo_box_set_active(screen_mode, 1);
+		gtk_combo_box_set_active(screen_mode, 1);
 	char val[32];
 	sprintf(val, "%d", dis_width);
 	if(!gtk_combo_box_set_active_id(screen_x, val))
-    {
-        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(screen_x), val, val);
-        gtk_combo_box_set_active_id(screen_x, val);
-    }
+	{
+		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(screen_x), val, val);
+		gtk_combo_box_set_active_id(screen_x, val);
+	}
 	sprintf(val, "%d", dis_height);
 	if(!gtk_combo_box_set_active_id(screen_y, val))
-    {
-        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(screen_y), val, val);
-        gtk_combo_box_set_active_id(screen_y, val);
-    }
+	{
+		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(screen_y), val, val);
+		gtk_combo_box_set_active_id(screen_y, val);
+	}
 
 }
 
@@ -1308,7 +1410,7 @@ int main (int argc, char *argv[])
 		char *p;
 		strcpy(g_app_path, argv[0]);
 		if ((p = strstr(g_app_path, "SheepShaverGUI.app/Contents/MacOS")) != NULL) {
-		    strcpy(p, "SheepShaver.app/Contents/MacOS/SheepShaver");
+			strcpy(p, "SheepShaver.app/Contents/MacOS/SheepShaver");
 			if (access(g_app_path, X_OK) < 0) {
 				char str[256];
 				sprintf(str, GetString(STR_NO_B2_EXE_FOUND), g_app_path, strerror(errno));

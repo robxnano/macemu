@@ -41,8 +41,11 @@ extern "C" void cb_ramsize(GtkWidget *widget);
 extern "C" void cb_screen_mode(GtkWidget *widget);
 extern "C" void cb_infobar_show(GtkWidget *widget);
 extern "C" void cb_hotkey(GtkWidget *widget);
+extern "C" void cb_cpu(GtkWidget *widget);
 extern "C" void cb_elevate_response(GtkWidget *widget, int response);
+extern "C" void cb_swap_opt_cmd(GtkWidget *widget);
 extern "C" void dl_quit(GtkWidget *widget);
+extern "C" gchar* ram_slider_fmt(GtkWidget *widget, double value);
 
 static void hide_widget(GtkWidget *widget);
 #endif
