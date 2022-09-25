@@ -103,6 +103,10 @@ This is free software, and you are welcome to redistribute it under the terms of
 	{STR_ABOUT_WEBSITE, "http://basiliskii.cebix.net"},
 	{STR_ABOUT_WEBSITE_LABEL, "Website"},
 
+	{STR_ELEVATE_DIALOG_TITLE, "Change security settings?"},
+	{STR_ELEVATE_DIALOG_TEXT, "Basilisk II needs to change security settings in order to run.\n\
+You will be asked for superuser permissions."},
+
 	{-1, NULL}	// End marker
 };
 

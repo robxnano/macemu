@@ -57,6 +57,7 @@ user_string_def common_strings[] = {
 	{STR_START_BUTTON, "Start"},
 	{STR_QUIT_BUTTON, "Quit"},
 	{STR_CANCEL_BUTTON, "Cancel"},
+	{STR_CONTINUE_BUTTON, "Continue"},
 
 	{STR_NO_MEM_ERR, "Not enough free memory."},
 	{STR_NOT_ENOUGH_MEMORY_ERR, "Your computer does not have enough memory to run Basilisk II."},

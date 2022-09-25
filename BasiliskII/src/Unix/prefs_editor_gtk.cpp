@@ -277,11 +277,6 @@ static void window_destroyed(void)
 // Emulator is ready to start
 static void run_emulator()
 {
-	if(access(PrefsFindString("rom"), F_OK) != 0)
-	{
-		cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "rom-error-bar")));
-		return;
-	}
 	start_clicked = true;
 	save_volumes();
 	SavePrefs();
@@ -322,7 +317,7 @@ static int elevate_for_mmap()
 	{
 		exec = "gksudo";
 		cmd1 = "-D";
-		cmd2 = "SheepShaver";
+		cmd2 = GetString(STR_WINDOW_TITLE);
 		strcat(cmds, "sh -c ");
 	}
 	else return 0;
@@ -360,20 +355,21 @@ extern "C" void cb_elevate_response(GtkWidget *dialog, int response)
 // "Start" button clicked
 static void cb_start (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
+	if(access(PrefsFindString("rom"), F_OK) != 0)
+	{
+		cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "rom-error-bar")));
+		return;
+	}
 #if REAL_ADDRESSING && defined(__linux__)
 	if(!can_mmap_real())
 	{
-		const char *title = "Change security settings?";
-		char text[256];
-		sprintf(text, "%s needs to change security settings in order to run.\n\
-You will be asked for superuser permissions.", GetString(STR_WINDOW_TITLE));
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
 		                    (GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
 		                    GTK_MESSAGE_QUESTION,
 		                    GTK_BUTTONS_CANCEL,
-		                    title);
-	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), (const char*) &text);
-		GtkWidget *button = gtk_dialog_add_button(GTK_DIALOG(dialog), "Continue", GTK_RESPONSE_OK);
+		                    GetString(STR_ELEVATE_DIALOG_TITLE));
+	    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), GetString(STR_ELEVATE_DIALOG_TEXT));
+		GtkWidget *button = gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(STR_CONTINUE_BUTTON), GTK_RESPONSE_OK);
 		gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
 		g_signal_connect(dialog, "response", G_CALLBACK(cb_elevate_response), NULL);
 		gtk_widget_show(dialog);
@@ -537,12 +533,14 @@ static void set_file_menu(GtkApplication *app)
 	g_object_unref(menubuilder);
 }
 
-static void set_help_overlay(GtkApplicationWindow *win)
+static void set_help_overlay (GtkApplicationWindow *win)
 {
+#if GTK_CHECK_VERSION(3,20,0)
 	GtkBuilder *helpbuilder = gtk_builder_new_from_file("ui/help-overlay.ui");
 	gtk_application_window_set_help_overlay(win,
 	                                        GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
 	g_object_unref(helpbuilder);
+#endif
 }
 
 // Main
@@ -1042,9 +1040,17 @@ extern "C" void cb_entry (GtkWidget *widget)
 // Display the info bar
 extern "C" void cb_infobar_show (GtkWidget *widget)
 {
-	gtk_widget_show(GTK_WIDGET(widget));
 #if GTK_CHECK_VERSION(3,22,29)
+    /* Workaround for the fact that having the revealed property in the XML is not valid
+    in older GTK versions. Instead we hide it until it is about to be revealed. */
+    if (!gtk_widget_get_visible(widget))
+	{
+	    gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
+	    gtk_widget_show(widget);
+	}
 	gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), true);
+#else
+	gtk_widget_show(widget);
 #endif
 }
 
