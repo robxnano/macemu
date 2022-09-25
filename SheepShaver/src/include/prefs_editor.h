@@ -1,1 +1,1 @@
-/home/rob/Projects/macemu/BasiliskII/src/include/prefs_editor.h
+../../../BasiliskII/src/include/prefs_editor.h

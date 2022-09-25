@@ -1,1 +1,1 @@
-/home/rob/Projects/macemu/BasiliskII/src/Unix/prefs_editor_gtk.cpp
+../../../BasiliskII/src/Unix/prefs_editor_gtk.cpp

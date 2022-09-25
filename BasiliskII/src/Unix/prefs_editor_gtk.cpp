@@ -605,6 +605,12 @@ bool PrefsEditor(void)
 	hide_widget("scsi-expander");
 	bind_sensitivity("jit", "jitfpu");
 	hide_widget("udptunnel");
+	hide_widget("udpport");
+	hide_widget("udpport-label");
+	hide_widget("cpu");
+	hide_widget("cpu-label");
+	hide_widget("modelid");
+	hide_widget("modelid-label");
 	hide_widget("jitcachesize");
 	hide_widget("jitcachesize-label");
 	hide_widget("jitfpu");
