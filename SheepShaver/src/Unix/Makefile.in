@@ -19,7 +19,7 @@ CFLAGS = @CFLAGS@
 CXXFLAGS = @CXXFLAGS@
 CPPFLAGS = @CPPFLAGS@ -I../include -I. -I../CrossPlatform -I../slirp
 DEFS = @DEFS@ -D_REENTRANT -DDATADIR=\"$(datadir)/$(APP)\"
-LDFLAGS = @LDFLAGS@
+LDFLAGS = @LDFLAGS@ -Wl,--export-dynamic
 LIBS = @LIBS@
 SYSSRCS = @SYSSRCS@
 CPUSRCS = @CPUSRCS@
@@ -50,7 +50,7 @@ GUI_CFLAGS = @GUI_CFLAGS@
 GUI_LIBS = @GUI_LIBS@
 GUI_SRCS = ../prefs.cpp prefs_unix.cpp prefs_editor_gtk.cpp ../prefs_items.cpp \
 	../user_strings.cpp user_strings_unix.cpp xpram_unix.cpp sys_unix.cpp rpc_unix.cpp \
-	../dummy/prefs_dummy.cpp
+	../dummy/prefs_dummy.cpp g_resources.cpp
 
 XPLAT_SRCS = ../CrossPlatform/vm_alloc.cpp ../CrossPlatform/sigsegv.cpp ../CrossPlatform/video_blit.cpp
 

@@ -1221,9 +1221,11 @@ for most non-Apple keyboards</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkExpander">
+                  <object class="GtkExpander" id="scsi-expander">
+                    <property name="name">scsi-expander</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
+                    <property name="label-fill">True</property>
                     <child>
                       <!-- n-columns=2 n-rows=7 -->
                       <object class="GtkGrid" id="scsi-pane">

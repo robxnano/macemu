@@ -44,7 +44,7 @@ GUI_CFLAGS = @GUI_CFLAGS@
 GUI_LIBS = @GUI_LIBS@
 GUI_SRCS = ../prefs.cpp prefs_unix.cpp prefs_editor_gtk.cpp ../prefs_items.cpp \
 	../user_strings.cpp user_strings_unix.cpp xpram_unix.cpp sys_unix.cpp rpc_unix.cpp \
-	resources.cpp
+	g_resources.cpp
 
 GRESOURCE_SRCS = ui/basiliskii.gresource.xml ui/menu.ui ui/prefs-editor.ui
 

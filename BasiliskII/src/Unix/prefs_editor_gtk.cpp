@@ -36,7 +36,7 @@
 #include "prefs.h"
 #include "prefs_editor.h"
 #include "vm_alloc.h"
-#include "resources.h"
+#include "g_resources.h"
 
 #if defined(USE_SDL_AUDIO) || defined(USE_SDL_VIDEO)
 #include <SDL.h>
@@ -484,9 +484,9 @@ static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_
 				"license", GetString(STR_ABOUT_LICENSE),
 				"wrap-license", true,
 #ifdef SHEEPSHAVER
-				"logo-icon-name", "net.cebix.SheepShaver",
+				"logo-icon-name", "SheepShaver",
 #else
-				"logo-icon-name", "net.cebix.BasiliskII",
+				"logo-icon-name", "BasiliskII",
 #endif
 				NULL);
 }
@@ -602,10 +602,11 @@ bool PrefsEditor(void)
 	bind_sensitivity("keycodes", "keycodefile");
 	bind_sensitivity("keycodes", "keycodefile-browse");
 #ifdef SHEEPSHAVER
-	hide_widget("scsi-pane");
+	hide_widget("scsi-expander");
 	bind_sensitivity("jit", "jitfpu");
 	hide_widget("udptunnel");
 	hide_widget("jitcachesize");
+	hide_widget("jitcachesize-label");
 	hide_widget("jitfpu");
 	hide_widget("jitlazyflush");
 	hide_widget("jitinline");

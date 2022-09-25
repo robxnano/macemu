@@ -154,6 +154,8 @@ user_string_def common_strings[] = {
 	{STR_SERPORTB_CTRL, "Printer Port"},
 	{STR_NONET_CTRL, "Disable Ethernet"},
 	{STR_ETHERNET_IF_CTRL, "Ethernet Interface"},
+	{STR_UDPTUNNEL_CTRL, "Tunnel MacOS Networking over UDP"},
+	{STR_UDPPORT_CTRL, "UDP Port Number"},
 
 	{STR_MEMORY_MISC_PANE_TITLE, "Memory/Misc"},
 	{STR_RAMSIZE_CTRL, "MacOS RAM Size (MB)"},
@@ -169,7 +171,7 @@ user_string_def common_strings[] = {
 	{STR_IGNORESEGV_CTRL, "Ignore Illegal Memory Accesses"},
 	{STR_IDLEWAIT_CTRL, "Don't Use CPU When Idle"},
 	{STR_ROM_FILE_CTRL, "ROM File"},
-	{STR_NOGUI_CTRL, "Don't show settings window on launch"},
+	{STR_NOGUI_CTRL, "Don't Show Settings Window on Launch"},
 	{STR_NOGUI_TIP, "Tip: You can access the settings by right-clicking on the launcher icon." },
 	{STR_NOGUI_TIP2, "Tip: You can access the settings with the command: SheepShaver --nogui false" },
 
@@ -201,6 +203,15 @@ user_string_def common_strings[] = {
 
 	{STR_EXTFS_NAME, "Host Directory Tree"},
 	{STR_EXTFS_VOLUME_NAME, "Host"},
+
+	{STR_SCSI_PANE_TITLE, "SCSI"},
+	{STR_SCSI_ID_0, "ID 0"},
+	{STR_SCSI_ID_1, "ID 1"},
+	{STR_SCSI_ID_2, "ID 2"},
+	{STR_SCSI_ID_3, "ID 3"},
+	{STR_SCSI_ID_4, "ID 4"},
+	{STR_SCSI_ID_5, "ID 5"},
+	{STR_SCSI_ID_6, "ID 6"},
 
 	{-1, NULL}	// End marker
 };

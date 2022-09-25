@@ -1,3 +1,4 @@
+
 /*
  *  main_unix.cpp - Emulation core, Unix implementation
  *
@@ -98,7 +99,6 @@
 #include "main.h"
 #include "version.h"
 #include "prefs.h"
-#include "prefs_editor.h"
 #include "cpu_emulation.h"
 #include "emul_op.h"
 #include "xlowmem.h"
@@ -133,11 +133,12 @@
 
 #ifdef ENABLE_GTK
 #include <gtk/gtk.h>
-#include <gresource.h>
+#include <gdk/gdk.h>
 #if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 #include <X11/Xlib.h>
 #endif
 #endif
+#include "prefs_editor.h"
 
 #ifdef ENABLE_XF86_DGA
 #include <X11/Xlib.h>
@@ -2340,7 +2341,7 @@ void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 						GetString(title_id), NULL);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
 	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
-	g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
+	//g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
 	gtk_widget_show(dialog);
 	gtk_widget_destroy(dialog);
 	return;

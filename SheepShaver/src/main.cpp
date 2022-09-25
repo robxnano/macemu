@@ -23,7 +23,6 @@
 #include "main.h"
 #include "version.h"
 #include "prefs.h"
-#include "prefs_editor.h"
 #include "cpu_emulation.h"
 #include "emul_op.h"
 #include "xlowmem.h"

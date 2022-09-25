@@ -21,7 +21,13 @@
 #ifndef PREFS_EDITOR_H
 #define PREFS_EDITOR_H
 
+#ifdef __BEOS__
+extern void PrefsEditor(uint32 msg);
+#else
 extern bool PrefsEditor(void);
+#endif
+
+#ifdef ENABLE_GTK
 static GList *add_serial_names(void);
 static GList *add_ether_names(void);
 static void save_volumes(void);
@@ -48,4 +54,5 @@ extern "C" void dl_quit(GtkWidget *widget);
 extern "C" gchar* ram_slider_fmt(GtkWidget *widget, double value);
 
 static void hide_widget(GtkWidget *widget);
+#endif
 #endif

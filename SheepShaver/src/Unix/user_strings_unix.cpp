@@ -96,6 +96,12 @@ user_string_def platform_strings[] = {
 	{STR_OPEN_WINDOW_ERR, "Cannot open Mac window."},
 
 	{STR_NO_B2_EXE_FOUND, "Could not start %s (%s)."},
+	{STR_ABOUT_COPYRIGHT, "© 1997-2008 Christian Bauer et al."},
+	{STR_ABOUT_LICENSE, "SheepShaver comes with ABSOLUTELY NO WARRANTY. \
+This is free software, and you are welcome to redistribute it under the terms of the GNU General Public License."},
+	{STR_ABOUT_COMMENTS, "Open source PowerPC Mac emulator"},
+	{STR_ABOUT_WEBSITE, "http://sheepshaver.cebix.net"},
+	{STR_ABOUT_WEBSITE_LABEL, "Website"},
 
 	{-1, NULL}	// End marker
 };

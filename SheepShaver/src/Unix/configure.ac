@@ -3,7 +3,7 @@ dnl Written in 2002 by Christian Bauer
 
 AC_INIT([SheepShaver],[2.4],[Christian.Bauer@uni-mainz.de],[SheepShaver])
 AC_CONFIG_SRCDIR(main_unix.cpp)
-AC_PREREQ([2.71])
+AC_PREREQ([2.61])
 AC_CONFIG_HEADERS([config.h])
 AH_TOP(
 #ifndef CONFIG_H
@@ -345,8 +345,7 @@ if [[ "x$WANT_GTK" = "xgtk3" ]]; then
 fi
 if [[ "x$WANT_GTK" != "xno" -a "x$WANT_STANDALONE_GUI" = "xno" ]]; then
   AC_DEFINE(ENABLE_GTK, 1, [Define if using GTK.])
-  UISRCS=prefs_editor_gtk.cpp
-  GRESOURCE=gresource.cpp
+  UISRCS="prefs_editor_gtk.cpp g_resources.cpp"
 fi
 AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
