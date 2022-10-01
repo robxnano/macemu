@@ -87,6 +87,11 @@ user_string_def platform_strings[] = {
 
 	{STR_NO_B2_EXE_FOUND, "Could not start %s (%s)."},
 
+	{STR_ELEVATE_DIALOG_TITLE, "Change security settings?"},
+	{STR_ELEVATE_DIALOG_TEXT, "SheepShaver needs to temporarily change security settings in order to run. \
+You will be asked for superuser permissions. \n\
+<a href=\"https://wiki.debian.org/mmap_min_addr\">More information about this setting</a>"},
+
 	{-1, NULL}	// End marker
 };
 

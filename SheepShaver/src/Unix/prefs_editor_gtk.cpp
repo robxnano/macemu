@@ -37,6 +37,7 @@
 #include "xpram.h"
 #include "prefs.h"
 #include "prefs_editor.h"
+#include "vm_alloc.h"
 
 #define DEBUG 0
 #include "debug.h"
@@ -345,13 +346,111 @@ static void window_destroyed(void)
 	gtk_main_quit();
 }
 
-// "Start" button clicked
-static void cb_start(...)
+// Emulator is ready to start
+static void run_emulator()
 {
 	start_clicked = true;
 	read_settings();
 	SavePrefs();
 	gtk_widget_destroy(win);
+}
+#if REAL_ADDRESSING
+// Checks if mmap from zero is possible
+static bool can_mmap_real()
+{
+	bool ret = false;
+	if (vm_init() < 0)
+		return ret;
+	if (vm_acquire_fixed(0, 0x3000) >= 0)
+		ret = true;
+	vm_release(0, 0x3000);
+	vm_exit();
+	return ret;
+}
+
+#if defined(__linux__)
+// Attempts to get superuser permissions to change security settings
+// preventing mmap from zero
+static int elevate_for_mmap()
+{
+	const gchar *argv[5];
+	GString *arg3 = g_string_new(NULL);
+
+	// Find a suitable superuser program
+	if (argv[0] = g_find_program_in_path("pkexec"))
+	{
+		argv[1] = "sh";
+		argv[2] = "-c";
+	}
+	else if (argv[0] = g_find_program_in_path("gksudo"))
+	{
+		argv[1] = "-D";
+		argv[2] = GetString(STR_WINDOW_TITLE);
+		g_string_append(arg3, "sh -c ");
+	}
+	else
+	{
+	    g_string_free(arg3, true);
+	    return 0;
+	}
+	// Find out which security mechanisms are in use
+	if (access("/proc/sys/vm/mmap_min_addr", F_OK) == 0)
+	{
+		g_string_append(arg3, g_find_program_in_path("sysctl"));
+		g_string_append(arg3, " vm.mmap_min_addr=0;");
+	}
+	if (g_find_program_in_path("setsebool"))
+	{
+		g_string_append(arg3, g_find_program_in_path("setsebool"));
+		g_string_append(arg3, " mmap_low_allowed 1;");
+	}
+
+	argv[3] = arg3->str;
+	argv[4] = NULL;
+
+	// Run the command
+	GError *g_error = NULL;
+	int ret = g_spawn_sync(NULL, (gchar **)argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL,
+	                       NULL, NULL, NULL, NULL, NULL, &g_error);
+	g_string_free(arg3, true);
+	if(ret == 0)
+		printf("%s\n", g_error->message);
+	return ret;
+}
+
+// User responded to the pkexec dialog
+extern "C" void cb_elevate_response(GtkWidget *dialog, int response)
+{
+	if (response == GTK_RESPONSE_OK)
+	{
+		if(elevate_for_mmap() && can_mmap_real())
+			run_emulator();
+	}
+	gtk_widget_destroy(dialog);
+}
+#endif
+#endif
+
+// "Start" button clicked
+static void cb_start (...)
+{
+#if REAL_ADDRESSING && defined(__linux__) && GTK_CHECK_VERSION(2,4,0)
+	if(!can_mmap_real())
+	{
+		GtkWidget *dialog = gtk_message_dialog_new_with_markup(GTK_WINDOW(win),
+		                    (GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+		                    GTK_MESSAGE_QUESTION,
+		                    GTK_BUTTONS_OK_CANCEL,
+		                    GetString(STR_ELEVATE_DIALOG_TEXT));
+		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+		gtk_window_set_title(GTK_WINDOW(dialog), GetString(STR_ELEVATE_DIALOG_TITLE));
+		gtk_signal_connect(GTK_OBJECT(dialog), "response", GTK_SIGNAL_FUNC(cb_elevate_response), NULL);
+		gtk_widget_show(dialog);
+		GtkWidget *message_area = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
+	}
+	else
+#endif
+		run_emulator();
 }
 
 // "Quit" button clicked
