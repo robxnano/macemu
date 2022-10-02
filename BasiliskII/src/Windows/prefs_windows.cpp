@@ -22,8 +22,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <Shlobj.h>
 
 #include <string>
+using std::string;
 typedef std::basic_string<TCHAR> tstring;
 
 #include "prefs.h"
@@ -70,30 +72,72 @@ static tstring prefs_path;
  *  Load preferences from settings file
  */
 
-void LoadPrefs(const char *vmdir)
+static tstring get_appdata_dir (void)
 {
-	// Construct prefs path
-	if (UserPrefsPath.empty()) {
-		int pwd_len = GetCurrentDirectory(0, NULL);
-		prefs_path.resize(pwd_len);
-		pwd_len = GetCurrentDirectory(pwd_len, &prefs_path.front());
-		prefs_path[pwd_len] = TEXT('\\');
-		prefs_path += PREFS_FILE_NAME;
-	} else
-		prefs_path = UserPrefsPath;
+	wchar_t* AppDataPathW;
+	HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_NO_ALIAS, NULL, &AppDataPathW);
 
+	if (SUCCEEDED(hr))
+	{
+		int result = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, AppDataPathW, -1, NULL, 0, NULL, NULL);
+		if (result)
+		{
+			char AppDataPath[result];
+			result = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, AppDataPathW, -1, AppDataPath, result, NULL, NULL);
+			return tstring(AppDataPath);
+		}
+	}
+	fprintf(stderr, "WARNING: Could not get Roaming App Data folder\n");
+	return NULL;
+}
+
+static bool load_prefs_file(const string& path, bool exit_on_failure)
+{
+	printf("%s\n", prefs_path.c_str());
 	// Read preferences from settings file
-	FILE *f = _tfopen(prefs_path.c_str(), TEXT("r"));
+	FILE* f = _tfopen(prefs_path.c_str(), TEXT("r"));
 	if (f != NULL) {
 
 		// Prefs file found, load settings
 		LoadPrefsFromStream(f);
 		fclose(f);
+		return true;
+	}
+	else if (exit_on_failure)
+	{
+		fprintf(stderr, "ERROR: Could not load prefs file from %s (%s)\n",
+			path.c_str(), strerror(errno));
+		exit(1);
+	}
+	return false;
+}
 
-	} else {
+void LoadPrefs(const char *vmdir)
+{
 
-		// No prefs file, save defaults
-		SavePrefs();
+
+	// Construct prefs path
+	if (!UserPrefsPath.empty())
+	{
+		prefs_path = UserPrefsPath;
+		if (load_prefs_file(prefs_path, true))
+			return;
+	}
+	else
+	{
+		prefs_path = get_appdata_dir() + string("\\BasiliskII\\") + PREFS_FILE_NAME;
+		if (load_prefs_file(prefs_path, false))
+			return;
+		int pwd_len = GetCurrentDirectory(0, NULL);
+		prefs_path.resize(pwd_len);
+		pwd_len = GetCurrentDirectory(pwd_len, &prefs_path.front());
+		prefs_path[pwd_len] = TEXT('\\');
+		prefs_path += PREFS_FILE_NAME;
+		if (!load_prefs_file(prefs_path, false))
+		{
+			// No prefs file, save defaults
+			SavePrefs();
+		}
 	}
 }
 
