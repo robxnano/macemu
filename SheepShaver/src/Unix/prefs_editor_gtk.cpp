@@ -396,13 +396,11 @@ static int elevate_for_mmap()
 	// Find out which security mechanisms are in use
 	if (access("/proc/sys/vm/mmap_min_addr", F_OK) == 0)
 	{
-		g_string_append(arg3, g_find_program_in_path("sysctl"));
-		g_string_append(arg3, " vm.mmap_min_addr=0;");
+		g_string_append(arg3, ("sysctl vm.mmap_min_addr=0;");
 	}
 	if (g_find_program_in_path("setsebool"))
 	{
-		g_string_append(arg3, g_find_program_in_path("setsebool"));
-		g_string_append(arg3, " mmap_low_allowed 1;");
+		g_string_append(arg3, ("setsebool mmap_low_allowed 1;");
 	}
 
 	argv[3] = arg3->str;
