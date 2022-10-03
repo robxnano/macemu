@@ -147,6 +147,8 @@ extern "C" void cb_browse(GtkWidget *button, GtkWidget *entry)
 							"Cancel", GTK_RESPONSE_CANCEL,
 							"Open", GTK_RESPONSE_ACCEPT,
 							NULL);
+	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser),
+	                                    g_path_get_dirname(gtk_entry_get_text(GTK_ENTRY(entry))));
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
 	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
 	gtk_window_set_modal(GTK_WINDOW(chooser), true);
@@ -163,6 +165,7 @@ extern "C" void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 							"Cancel", GTK_RESPONSE_CANCEL,
 							"Select", GTK_RESPONSE_ACCEPT,
 							NULL);
+	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), gtk_entry_get_text(GTK_ENTRY(entry)));
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
 	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
 	gtk_window_set_modal(GTK_WINDOW(chooser), true);
