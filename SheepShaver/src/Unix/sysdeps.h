@@ -39,6 +39,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 
 #ifdef HAVE_PTHREADS
 # include <pthread.h>
@@ -52,6 +53,10 @@
 #include <sys/time.h>
 #endif
 #include <time.h>
+
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
 
 #ifdef __MACH__
 #include <mach/mach_types.h>
@@ -158,6 +163,9 @@ typedef uint64 uintptr;
 typedef int64 intptr;
 #else
 #error "Unsupported size of pointer"
+#endif
+#ifndef HAVE_LOFF_T
+#define loff_t off_t
 #endif
 
 // Define if the host processor supports fast unaligned load/stores

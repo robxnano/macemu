@@ -470,7 +470,6 @@ static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_
 	        INFO_VIDEO,
 	        INFO_AUDIO,
 	        GetString(STR_ABOUT_COPYRIGHT));
-
    	char version[64];
 	sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
 	const char *authors[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", "Gwenole Beauchesne", NULL};
@@ -1172,7 +1171,7 @@ static GList *add_serial_names (void)
 #if defined(__linux__)
 			if (strncmp(de->d_name, "ttyS", 4) == 0 || strncmp(de->d_name, "lp", 2) == 0) {
 #elif defined(__FreeBSD__)
-			if (strncmp(de->d_name, "cuaa", 4) == 0 || strncmp(de->d_name, "lpt", 3) == 0) {
+			if (strncmp(de->d_name, "cua", 3) == 0 || strncmp(de->d_name, "lpt", 3) == 0) {
 #elif defined(__NetBSD__)
 			if (strncmp(de->d_name, "tty0", 4) == 0 || strncmp(de->d_name, "lpt", 3) == 0) {
 #elif defined(sgi)
