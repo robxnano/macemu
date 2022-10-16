@@ -3,7 +3,7 @@
 <interface>
   <requires lib="gtk+" version="3.14"/>
   <object class="GtkAdjustment" id="scroll-lines-adj">
-    <property name="lower">1</property>
+    <property name="lower">-99</property>
     <property name="upper">99</property>
     <property name="value">1</property>
     <property name="step-increment">1</property>
@@ -192,10 +192,6 @@
           <object class="GtkStack" id="pane-stack">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="margin-start">6</property>
-            <property name="margin-end">6</property>
-            <property name="margin-top">6</property>
-            <property name="margin-bottom">6</property>
             <property name="hexpand">True</property>
             <property name="vexpand">True</property>
             <child>
@@ -203,6 +199,10 @@
               <object class="GtkGrid" id="volumes-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">10</property>
                 <child>
@@ -385,7 +385,7 @@
                         <property name="name">bootdriver</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="tooltip-text" translatable="yes">Select whether you want to boot from a CD-ROM</property>
+                        <property name="tooltip-text" translatable="yes">Select whether you want to boot from a CD-ROM or ISO</property>
                         <property name="halign">start</property>
                         <property name="active">0</property>
                         <items>
@@ -402,16 +402,17 @@
                     </child>
                     <child>
                       <object class="GtkCheckButton" id="nocdrom">
-                        <property name="label" translatable="yes">Disable CD-ROM</property>
+                        <property name="label" translatable="yes">Use physical CD-ROM drive</property>
                         <property name="name">nocdrom</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">False</property>
+                        <property name="tooltip-text" translatable="yes">Select if you want to use a real CD in the virtual machine</property>
                         <property name="halign">end</property>
                         <property name="valign">center</property>
                         <property name="hexpand">True</property>
                         <property name="draw-indicator">True</property>
-                        <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                        <signal name="toggled" handler="cb_check_box_inv" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -435,6 +436,10 @@
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
                 <property name="orientation">vertical</property>
                 <child>
                   <!-- n-columns=2 n-rows=5 -->
@@ -448,7 +453,6 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="halign">end</property>
                         <property name="label" translatable="yes">Video mode:</property>
                       </object>
                       <packing>
@@ -502,7 +506,6 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="halign">end</property>
                         <property name="label" translatable="yes">Refresh rate:</property>
                       </object>
                       <packing>
@@ -530,7 +533,7 @@
                         <signal name="changed" handler="cb_screen_mode" swapped="no"/>
                         <child internal-child="entry">
                           <object class="GtkEntry">
-                            <property name="can-focus">False</property>
+                            <property name="can-focus">True</property>
                           </object>
                         </child>
                       </object>
@@ -543,7 +546,6 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="halign">end</property>
                         <property name="label" translatable="yes">Width:</property>
                       </object>
                       <packing>
@@ -555,7 +557,6 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="halign">end</property>
                         <property name="label" translatable="yes">Height:</property>
                       </object>
                       <packing>
@@ -581,7 +582,7 @@
                         <signal name="changed" handler="cb_screen_mode" swapped="no"/>
                         <child internal-child="entry">
                           <object class="GtkEntry">
-                            <property name="can-focus">False</property>
+                            <property name="can-focus">True</property>
                           </object>
                         </child>
                       </object>
@@ -592,7 +593,7 @@
                     </child>
                     <child>
                       <object class="GtkCheckButton" id="gfxaccel">
-                        <property name="label" translatable="yes">Enable QuickDraw acceleration</property>
+                        <property name="label" translatable="yes">QuickDraw acceleration</property>
                         <property name="name">gfxaccel</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -638,7 +639,6 @@
                       <object class="GtkLabel" id="mixer-label">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="halign">end</property>
                         <property name="label" translatable="yes">Audio mixer:</property>
                       </object>
                       <packing>
@@ -650,7 +650,6 @@
                       <object class="GtkLabel" id="dsp-label">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="halign">end</property>
                         <property name="label" translatable="yes">Audio output device:</property>
                       </object>
                       <packing>
@@ -687,14 +686,14 @@
                     </child>
                     <child>
                       <object class="GtkCheckButton" id="nosound">
-                        <property name="label" translatable="yes">Disable sound output</property>
+                        <property name="label" translatable="yes">Enable sound output</property>
                         <property name="name">nosound</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">False</property>
                         <property name="halign">start</property>
                         <property name="draw-indicator">True</property>
-                        <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                        <signal name="toggled" handler="cb_check_box_inv" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
@@ -721,6 +720,10 @@
               <object class="GtkGrid" id="keyboard-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
                 <property name="hexpand">True</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">10</property>
@@ -745,7 +748,6 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Keycode translation file:</property>
                   </object>
                   <packing>
@@ -799,7 +801,6 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Mouse wheel function:</property>
                   </object>
                   <packing>
@@ -811,7 +812,6 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Lines to scroll:</property>
                   </object>
                   <packing>
@@ -843,6 +843,7 @@
                     <property name="name">mousewheellines</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
+                    <property name="tooltip-text" translatable="yes">Negative values invert the scroll direction</property>
                     <property name="halign">start</property>
                     <property name="hexpand">False</property>
                     <property name="input-purpose">number</property>
@@ -860,7 +861,6 @@
                     <property name="can-focus">False</property>
                     <property name="tooltip-text" translatable="yes">Choose a key combo to use for emulator actions.
 See Help &gt; Keyboard Shortcuts for a full list.</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Hotkey combination:</property>
                   </object>
                   <packing>
@@ -952,7 +952,7 @@ See Help &gt; Keyboard Shortcuts for a full list.</property>
                     <property name="column-spacing">12</property>
                     <child>
                       <object class="GtkCheckButton" id="swap_opt_cmd">
-                        <property name="label" translatable="yes">Swap Mac OS modifier keys:</property>
+                        <property name="label" translatable="yes">Swap Mac OS modifier keys</property>
                         <property name="name">swap_opt_cmd</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -1067,13 +1067,16 @@ for most non-Apple keyboards</property>
               <object class="GtkGrid" id="network-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">10</property>
                 <child>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Modem port:</property>
                   </object>
                   <packing>
@@ -1085,7 +1088,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Printer port:</property>
                   </object>
                   <packing>
@@ -1097,7 +1099,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Ethernet interface:</property>
                   </object>
                   <packing>
@@ -1109,7 +1110,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel" id="udpport-label">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">UDP Port:</property>
                   </object>
                   <packing>
@@ -1128,7 +1128,7 @@ for most non-Apple keyboards</property>
                     <signal name="changed" handler="cb_combo_entry_str" swapped="no"/>
                     <child internal-child="entry">
                       <object class="GtkEntry">
-                        <property name="can-focus">False</property>
+                        <property name="can-focus">True</property>
                       </object>
                     </child>
                   </object>
@@ -1147,7 +1147,7 @@ for most non-Apple keyboards</property>
                     <signal name="changed" handler="cb_combo_entry_str" swapped="no"/>
                     <child internal-child="entry">
                       <object class="GtkEntry">
-                        <property name="can-focus">False</property>
+                        <property name="can-focus">True</property>
                       </object>
                     </child>
                   </object>
@@ -1166,7 +1166,7 @@ for most non-Apple keyboards</property>
                     <signal name="changed" handler="cb_combo_entry_str" swapped="no"/>
                     <child internal-child="entry">
                       <object class="GtkEntry">
-                        <property name="can-focus">False</property>
+                        <property name="can-focus">True</property>
                       </object>
                     </child>
                   </object>
@@ -1599,14 +1599,17 @@ for most non-Apple keyboards</property>
               <object class="GtkGrid" id="system-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">10</property>
                 <child>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
-                    <property name="label" translatable="yes">Mac OS RAM size (MB):</property>
+                    <property name="label" translatable="yes">Mac OS RAM size:</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -1617,7 +1620,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel" id="modelid-label">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Mac model ID:</property>
                   </object>
                   <packing>
@@ -1629,7 +1631,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel" id="cpu-label">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">CPU type:</property>
                   </object>
                   <packing>
@@ -1641,7 +1642,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">ROM file:</property>
                   </object>
                   <packing>
@@ -1687,7 +1687,7 @@ for most non-Apple keyboards</property>
                 </child>
                 <child>
                   <object class="GtkCheckButton" id="nogui">
-                    <property name="label" translatable="yes">Don't show settings window on startup</property>
+                    <property name="label" translatable="yes">Show settings window on startup</property>
                     <property name="name">nogui</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -1695,7 +1695,7 @@ for most non-Apple keyboards</property>
                     <property name="tooltip-text" translatable="yes">You can always access the Settings by right-clicking on the launcher icon</property>
                     <property name="halign">start</property>
                     <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                    <signal name="toggled" handler="cb_check_box_inv" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -1712,18 +1712,19 @@ for most non-Apple keyboards</property>
                     <property name="has-entry">True</property>
                     <property name="popup-fixed-width">False</property>
                     <items>
-                      <item id="16" translatable="yes">16</item>
-                      <item id="32" translatable="yes">32</item>
-                      <item id="64" translatable="yes">64</item>
-                      <item id="128" translatable="yes">128</item>
-                      <item id="256" translatable="yes">256</item>
-                      <item id="512" translatable="yes">512</item>
-                      <item id="1024" translatable="yes">1024</item>
+                      <item id="16" translatable="yes">16 MB</item>
+                      <item id="32" translatable="yes">32 MB</item>
+                      <item id="64" translatable="yes">64 MB</item>
+                      <item id="128" translatable="yes">128 MB</item>
+                      <item id="256" translatable="yes">256 MB</item>
+                      <item id="512" translatable="yes">512 MB</item>
+                      <item id="1024" translatable="yes">1024 MB</item>
                     </items>
                     <signal name="changed" handler="cb_ramsize" swapped="no"/>
                     <child internal-child="entry">
                       <object class="GtkEntry">
-                        <property name="can-focus">False</property>
+                        <property name="can-focus">True</property>
+                        <signal name="focus-out-event" handler="cb_format_mb" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -1760,6 +1761,7 @@ for most non-Apple keyboards</property>
                     <child>
                       <object class="GtkEntry" id="rom">
                         <property name="name">rom</property>
+                        <property name="width-request">400</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="tooltip-text" translatable="yes">You must select a ROM file to boot successfully</property>
@@ -1842,6 +1844,10 @@ for most non-Apple keyboards</property>
               <object class="GtkGrid" id="jit-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">10</property>
                 <child>
@@ -1899,7 +1905,6 @@ for most non-Apple keyboards</property>
                   <object class="GtkLabel" id="jitcachesize-label">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">end</property>
                     <property name="label" translatable="yes">Translation cache size (KB):</property>
                   </object>
                   <packing>
@@ -1958,7 +1963,7 @@ for most non-Apple keyboards</property>
                     <signal name="changed" handler="cb_combo_entry_int" swapped="no"/>
                     <child internal-child="entry">
                       <object class="GtkEntry">
-                        <property name="can-focus">False</property>
+                        <property name="can-focus">True</property>
                       </object>
                     </child>
                   </object>
@@ -1982,51 +1987,44 @@ for most non-Apple keyboards</property>
           </packing>
         </child>
         <child>
-          <object class="GtkSeparator">
+          <object class="GtkActionBar">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="margin-start">6</property>
-            <property name="margin-end">6</property>
-            <property name="margin-bottom">6</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">5</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkButtonBox">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="margin-start">6</property>
-            <property name="margin-end">6</property>
-            <property name="margin-bottom">6</property>
             <child>
-              <object class="GtkButton" id="start-button">
-                <property name="label" translatable="yes">Start</property>
+              <object class="GtkButtonBox">
                 <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-                <property name="action-name">win.start</property>
+                <property name="can-focus">False</property>
+                <property name="hexpand">True</property>
+                <child>
+                  <object class="GtkButton" id="start-button">
+                    <property name="label" translatable="yes">Start</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <property name="action-name">win.start</property>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="quit-button">
+                    <property name="label" translatable="yes">Quit</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <property name="action-name">win.quit</property>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="quit-button">
-                <property name="label" translatable="yes">Quit</property>
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-                <property name="action-name">win.quit</property>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>

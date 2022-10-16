@@ -82,8 +82,8 @@ user_string_def platform_strings[] = {
 	{STR_DSPDEVICE_FILE_CTRL, "Audio Output Device"},
 	{STR_MIXERDEVICE_FILE_CTRL, "Audio Mixer Device"},
 
-	{STR_BROWSE_TITLE, "Select file"},
-	{STR_BROWSE_FOLDER_TITLE, "Select folder"},
+	{STR_BROWSE_TITLE, "Select File"},
+	{STR_BROWSE_FOLDER_TITLE, "Select Folder"},
 	{STR_BROWSE_CTRL, "Browse..."},
 	{STR_INPUT_PANE_TITLE, "Keyboard/Mouse"},
 	{STR_KEYCODES_CTRL, "Use Raw Keycodes"},

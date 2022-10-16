@@ -33,26 +33,30 @@ static GList *add_ether_names(void);
 static void save_volumes(void);
 static void get_graphics_settings(void);
 static bool is_jit_capable(void);
-
-extern "C" void cb_browse(GtkWidget *widget, GtkWidget *entry);
-extern "C" void cb_browse_dir(GtkWidget *widget, GtkWidget *entry);
-extern "C" void cb_entry(GtkWidget *widget);
-extern "C" void cb_check_box(GtkWidget *widget);
-extern "C" void cb_spin_button(GtkWidget *widget);
-extern "C" void cb_combo_int(GtkWidget *widget);
-extern "C" void cb_combo_str(GtkWidget *widget);
-extern "C" void cb_combo_entry_int(GtkWidget *widget);
-extern "C" void cb_combo_entry_str(GtkWidget *widget);
-extern "C" void cb_ramsize(GtkWidget *widget);
-extern "C" void cb_screen_mode(GtkWidget *widget);
-extern "C" void cb_infobar_show(GtkWidget *widget);
-extern "C" void cb_hotkey(GtkWidget *widget);
-extern "C" void cb_cpu(GtkWidget *widget);
-extern "C" void cb_elevate_response(GtkWidget *widget, int response);
-extern "C" void cb_swap_opt_cmd(GtkWidget *widget);
-extern "C" void dl_quit(GtkWidget *widget);
-extern "C" gchar* ram_slider_fmt(GtkWidget *widget, double value);
-
 static void hide_widget(GtkWidget *widget);
+
+extern "C" {
+void cb_browse(GtkWidget *widget, GtkWidget *entry);
+void cb_browse_dir(GtkWidget *widget, GtkWidget *entry);
+void cb_entry(GtkWidget *widget);
+void cb_check_box(GtkWidget *widget);
+bool cb_switch(GtkWidget *widget);
+bool cb_switch_inv(GtkWidget *widget);
+void cb_spin_button(GtkWidget *widget);
+void cb_combo_int(GtkWidget *widget);
+void cb_combo_str(GtkWidget *widget);
+void cb_combo_entry_int(GtkWidget *widget);
+void cb_combo_entry_str(GtkWidget *widget);
+void cb_ramsize(GtkWidget *widget);
+void cb_screen_mode(GtkWidget *widget);
+void cb_infobar_show(GtkWidget *widget);
+void cb_hotkey(GtkWidget *widget);
+void cb_cpu(GtkWidget *widget);
+void cb_elevate_response(GtkWidget *widget, int response);
+void cb_swap_opt_cmd(GtkWidget *widget);
+void cb_format_mb(GtkWidget *widget);
+void dl_quit(GtkWidget *widget);
+gchar* ram_slider_fmt(GtkWidget *widget, double value);
+}
 #endif
 #endif

@@ -744,14 +744,14 @@ static bool init_sdl()
 GtkWindow *win;
 
 static void
-gtk_startup (GtkApplication *app)
+gui_startup (GtkApplication *app)
 {
 	if (use_gui && !PrefsEditor())
 		Quit();
 }
 
 static void
-gtk_activate (GtkApplication *app)
+gui_activate (GtkApplication *app)
 {
 	g_assert (GTK_IS_APPLICATION (app));
 	win = gtk_application_get_active_window (app);
@@ -952,10 +952,11 @@ int main(int argc, char **argv)
 #ifdef ENABLE_GTK
 	if (!gui_connection) {
 		// Init GTK
-		app = gtk_application_new ("net.cebix.SheepShaver", G_APPLICATION_FLAGS_NONE);
-		g_signal_connect (app, "activate", G_CALLBACK (gtk_activate), NULL);
-		g_signal_connect (app, "startup", G_CALLBACK (gtk_startup), NULL);
-		g_application_register(G_APPLICATION (app), NULL, NULL);
+		app = gtk_application_new (GetString(STR_APP_ID), G_APPLICATION_FLAGS_NONE);
+		g_set_prgname (GetString(STR_APP_DISPLAY_NAME));
+		g_signal_connect (app, "activate", G_CALLBACK (gui_activate), NULL);
+		g_signal_connect (app, "startup", G_CALLBACK (gui_startup), NULL);
+		g_application_register (G_APPLICATION (app), NULL, NULL);
 		ret = g_application_run (G_APPLICATION (app), argc, argv);
 	}
 #endif

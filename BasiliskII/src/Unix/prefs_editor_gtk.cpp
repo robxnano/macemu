@@ -35,7 +35,6 @@
 #include "xpram.h"
 #include "prefs.h"
 #include "prefs_editor.h"
-#include "vm_alloc.h"
 #include "g_resources.h"
 
 #if defined(USE_SDL_AUDIO) || defined(USE_SDL_VIDEO)
@@ -105,16 +104,16 @@ const char* INFO_VIDEO = "X11 video";
 #endif
 #endif
 
+#if !GLIB_CHECK_VERSION(2,44,0)
+#define g_auto
+#define g_autofree
+#define g_autoptr(X)	X*
+#endif
 
 /*
  *  Utility functions
  */
 
-#if ! GLIB_CHECK_VERSION(2,0,0)
-#define G_OBJECT(obj)							GTK_WIDGET(obj)
-#define g_object_get_data(obj, key)				gtk_object_get_data((obj), (key))
-#define g_object_set_data(obj, key, data)		gtk_object_set_data((obj), (key), (data))
-#endif
 
 struct opt_desc {
 	int label_id;
@@ -138,14 +137,16 @@ static void cb_browse_response(GtkWidget *chooser, int response, GtkEntry *entry
 	gtk_widget_destroy (chooser);
 }
 
+extern "C" {
+
 // Open the file chooser dialog to select a file
-extern "C" void cb_browse(GtkWidget *button, GtkWidget *entry)
+void cb_browse(GtkWidget *button, GtkWidget *entry)
 {
 	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_BROWSE_TITLE),
 							GTK_WINDOW(win),
 							GTK_FILE_CHOOSER_ACTION_OPEN,
-							"Cancel", GTK_RESPONSE_CANCEL,
-							"Open", GTK_RESPONSE_ACCEPT,
+							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
+							GetString(STR_SELECT_BUTTON), GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser),
 	                                    g_path_get_dirname(gtk_entry_get_text(GTK_ENTRY(entry))));
@@ -157,13 +158,13 @@ extern "C" void cb_browse(GtkWidget *button, GtkWidget *entry)
 }
 
 // Open the file chooser dialog to select a folder
-extern "C" void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
+void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 {
 	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_BROWSE_FOLDER_TITLE),
 							GTK_WINDOW(win),
 							GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-							"Cancel", GTK_RESPONSE_CANCEL,
-							"Select", GTK_RESPONSE_ACCEPT,
+							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
+							GetString(STR_SELECT_BUTTON), GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), gtk_entry_get_text(GTK_ENTRY(entry)));
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
@@ -173,14 +174,8 @@ extern "C" void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 	gtk_widget_show(chooser);
 }
 
-// User changed a file entry setting
-static void cb_file_entry(GtkEntry *entry, char *pref)
-{
-	PrefsReplaceString(pref, gtk_entry_get_text(entry));
-}
-
 // User changed one of the screen mode settings
-extern "C" void cb_screen_mode(GtkWidget *widget)
+void cb_screen_mode(GtkWidget *widget)
 {
 	const char *str_x = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_x));
 	int int_x = atoi(str_x);
@@ -190,18 +185,19 @@ extern "C" void cb_screen_mode(GtkWidget *widget)
 	int int_y = atoi(str_y);
 	if (int_y < 0) int_y = 0;
 
-	char screen[256];
 #ifdef ENABLE_FBDEV_DGA
 	const char *str = gtk_combo_box_get_active(screen_mode) ? "fbdev/%d/%d" : "win/%d/%d";
 #else
 	const char *str = gtk_combo_box_get_active(screen_mode) ? "dga/%d/%d" : "win/%d/%d";
 #endif
-	sprintf(screen, str, int_x, int_y);
+	g_autofree gchar *screen = g_strdup_printf(str, int_x, int_y);
 	PrefsReplaceString("screen", screen);
 	// Old prefs are now migrated
 	PrefsRemoveItem("windowmodes");
 	PrefsRemoveItem("screenmodes");
 }
+
+} // extern "C"
 
 static void set_ramsize_combo_box(void)
 {
@@ -209,11 +205,10 @@ static void set_ramsize_combo_box(void)
 	int size_mb = PrefsFindInt32(name) >> 20;
 	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, name));
 	char id[32];
-	snprintf(id, 32, "%d", size_mb);
-	if(!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id))
+	snprintf(id, 32, "%d MB", size_mb);
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id))
 	{
-		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(combo), id, id);
-		gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id);
+		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), id);
 	}
 }
 
@@ -235,8 +230,7 @@ static void set_cpu_combo_box (void)
 	GtkComboBox *combo = GTK_COMBO_BOX(gtk_builder_get_object(builder, "cpu"));
 	int32 cpu = PrefsFindInt32("cpu");
 	bool fpu = PrefsFindBool("fpu");
-	char id[32];
-	sprintf(id, "%d", (cpu << 1 | fpu));
+	g_autofree gchar *id = g_strdup_printf("%d", (cpu << 1 | fpu));
 	gtk_combo_box_set_active_id(combo, id);
 }
 
@@ -254,16 +248,10 @@ static GtkWidget *add_combo_box_values(GList *entries, const char *pref)
 
 	if (pref != NULL && !gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), current))
 	{
-		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(combo), current, current);
-		gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), current);
+		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), current);
 	}
 	return combo;
 }
-
-/*
- *  Show preferences editor
- *  Returns true when user clicked on "Start", false otherwise
- */
 
 // Window closed
 static gint window_closed(void)
@@ -285,100 +273,15 @@ static void run_emulator()
 	SavePrefs();
 	gtk_widget_destroy(win);
 }
-#if REAL_ADDRESSING && defined(__linux__)
-
-// Checks if mmap from zero is possible
-static bool can_mmap_real()
-{
-	bool ret = false;
-	if (vm_init() < 0) return false;
-	if (vm_acquire_fixed(0, 0x3000) >= 0)
-		ret = true;
-	vm_release(0, 0x3000);
-	vm_exit();
-	return ret;
-}
-
-/* Attempts to get superuser permissions to change security settings
- * preventing mmap from zero */
-static int elevate_for_mmap()
-{
-	int ret = 0;
-	char *child_stdout;
-	const char *exec;
-	char cmds[64] = "";
-	const char *cmd1;
-	const char *cmd2;
-	// Find a suitable superuser program
-	if (g_find_program_in_path("pkexec"))
-	{
-		exec = "pkexec";
-		cmd1 = "sh";
-		cmd2 = "-c";
-	}
-	else if (g_find_program_in_path("gksudo"))
-	{
-		exec = "gksudo";
-		cmd1 = "-D";
-		cmd2 = GetString(STR_WINDOW_TITLE);
-		strcat(cmds, "sh -c ");
-	}
-	else return 0;
-
-	// Find out which security mechanisms are in use
-	if(access("/proc/sys/vm/mmap_min_addr", F_OK) == 0)
-		strcat(cmds, "sysctl vm.mmap_min_addr=0;");
-	if(g_find_program_in_path("setsebool"))
-		strcat(cmds, "setsebool mmap_low_allowed 1;");
-
-	// Run the command
-	GError *g_error = NULL;
-	const gchar *argv[] = {exec, cmd1, cmd2, cmds, NULL};
-		ret = g_spawn_sync(NULL, (gchar **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL,
-		                   NULL, &child_stdout, NULL, NULL, &g_error);
-		if(ret == 0)
-			printf("Elevation Error: %s\n", g_error->message);
-	return ret;
-}
-
-// User responded to the pkexec dialog
-extern "C" void cb_elevate_response(GtkWidget *dialog, int response)
-{
-	if (response == GTK_RESPONSE_OK)
-	{
-		if(elevate_for_mmap() && can_mmap_real())
-			run_emulator();
-		else
-			cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "elevate-error-bar")));
-	}
-	gtk_widget_destroy(dialog);
-}
-#endif
-
 // "Start" button clicked
 static void cb_start (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	if(access(PrefsFindString("rom"), F_OK) != 0)
+	if (access(PrefsFindString("rom"), F_OK) != 0)
 	{
 		cb_infobar_show(GTK_WIDGET(gtk_builder_get_object(builder, "rom-error-bar")));
 		return;
 	}
-#if REAL_ADDRESSING && defined(__linux__)
-	if(!can_mmap_real())
-	{
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
-		                    (GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
-		                    GTK_MESSAGE_QUESTION,
-		                    GTK_BUTTONS_CANCEL,
-		                    GetString(STR_ELEVATE_DIALOG_TITLE));
-	    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), GetString(STR_ELEVATE_DIALOG_TEXT));
-		GtkWidget *button = gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(STR_CONTINUE_BUTTON), GTK_RESPONSE_OK);
-		gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
-		g_signal_connect(dialog, "response", G_CALLBACK(cb_elevate_response), NULL);
-		gtk_widget_show(dialog);
-	}
 	else
-#endif
 		run_emulator();
 }
 
@@ -408,11 +311,16 @@ extern "C" void dl_quit(GtkWidget *dialog)
 static void set_initial_prefs(void)
 {
 	const char *check_boxes[] = {
-		"nocdrom", "nosound", "udptunnel", "keycodes", "nogui", "ignoresegv", "idlewait",
-		"jit", "jitfpu", "jitinline", "jitlazyflush","jit68k", "gfxaccel", "swap_opt_cmd"};
-	for (int i = 0; i < 14; i++)
+		"udptunnel", "keycodes", "ignoresegv", "idlewait",
+		"jit", "jitfpu", "jitinline", "jitlazyflush","jit68k", "gfxaccel", "swap_opt_cmd" };
+	for (int i = 0; i < 11; i++)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, check_boxes[i])),
 		                             PrefsFindBool(check_boxes[i]));
+
+	const char *inv_check_boxes[] = { "nocdrom", "nosound", "nogui" };
+	for (int i = 0; i < 3; i++)
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, inv_check_boxes[i])),
+		                             !PrefsFindBool(inv_check_boxes[i]));
 	cb_swap_opt_cmd(NULL);
 
 	const char *entries[] = {
@@ -430,8 +338,7 @@ static void set_initial_prefs(void)
 	const char *id_combos[] = {"bootdriver", "frameskip", "mousewheelmode", "modelid"};
 	for (int i = 0; i < 4; i++)
 	{
-		char str[32];
-		sprintf(str, "%d", PrefsFindInt32(id_combos[i]));
+		g_autofree gchar *str = g_strdup_printf("%d", PrefsFindInt32(id_combos[i]));
 		gtk_combo_box_set_active_id(GTK_COMBO_BOX(gtk_builder_get_object(builder, id_combos[i])), str);
 	}
 
@@ -439,24 +346,22 @@ static void set_initial_prefs(void)
 	GtkComboBoxText *combo;
 	for (int i = 0; i < 1; i++)
 	{
+		const char *pref_str = PrefsFindString(text_combos[i]);
 		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, text_combos[i]));
-		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), PrefsFindString(text_combos[i])))
+		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), pref_str))
 		{
-			gtk_combo_box_text_prepend(combo, PrefsFindString(text_combos[i]), PrefsFindString(text_combos[i]));
-			gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), PrefsFindString(text_combos[i]));
+			gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), pref_str);
 		}
 	}
 
 	const char *int_combos[] = {"jitcachesize"};
 	for (int i = 0; i < 1; i++)
 	{
-		char str[32];
 		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, int_combos[i]));
-		sprintf(str, "%d", PrefsFindInt32(int_combos[i]));
+		g_autofree gchar *str = g_strdup_printf("%d", PrefsFindInt32(int_combos[i]));
 		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str))
 		{
-			gtk_combo_box_text_prepend(combo, str, str);
-			gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str);
+			gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), str);
 		}
 	}
 }
@@ -464,41 +369,29 @@ static void set_initial_prefs(void)
 // "About" selected
 static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	char sysinfo[512];
-	sprintf(sysinfo, "%s\nBuilt with %s and %s\n\%s",
+	g_autofree gchar *sysinfo = g_strdup_printf("%s\nBuilt with %s and %s\n\%s",
 	        INFO_ADDRESSING,
 	        INFO_VIDEO,
 	        INFO_AUDIO,
 	        GetString(STR_ABOUT_COPYRIGHT));
-   	char version[64];
-	sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
+	g_autofree gchar *version = g_strdup_printf("%d.%d", VERSION_MAJOR, VERSION_MINOR);
 	const char *authors[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", "Gwenole Beauchesne", NULL};
-				gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
-				"copyright", sysinfo,
-				"authors", authors,
-				"comments", GetString(STR_ABOUT_COMMENTS),
-				"website", GetString(STR_ABOUT_WEBSITE),
-				"website-label", GetString(STR_ABOUT_WEBSITE_LABEL),
-				"license", GetString(STR_ABOUT_LICENSE),
-				"wrap-license", true,
-#ifdef SHEEPSHAVER
-				"logo-icon-name", "SheepShaver",
-#else
-				"logo-icon-name", "BasiliskII",
-#endif
-				NULL);
+	gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
+	                      "copyright", sysinfo,
+	                      "authors", authors,
+	                      "comments", GetString(STR_ABOUT_COMMENTS),
+	                      "website", GetString(STR_ABOUT_WEBSITE),
+	                      "website-label", GetString(STR_ABOUT_WEBSITE_LABEL),
+	                      "license", GetString(STR_ABOUT_LICENSE),
+	                      "wrap-license", true,
+	                      "logo-icon-name", GetString(STR_APP_NAME),
+	                      NULL);
 }
 
 // "Zap NVRAM" selected
 static void mn_zap_pram (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
 	ZapPRAM();
-}
-
-// "Keyboard Shortcuts" selected
-static void cb_help_overlay (GSimpleAction *action, GVariant *parameter, gpointer user_data)
-{
-	return;
 }
 
 // Action entries (used in menus and buttons)
@@ -545,13 +438,17 @@ static void set_help_overlay (GtkApplicationWindow *win)
 #endif
 }
 
-// Main
+/*
+ *  Show preferences editor
+ *  Returns true when user clicked on "Start", false otherwise
+ */
+
 bool PrefsEditor(void)
 {
 	GApplication *app = g_application_get_default();
 	if (g_application_get_is_remote(app))
 	{
-		printf("ERROR: Another instance of Basilisk II is running, quitting...\n");
+		printf("Another instance of %s is running, quitting...\n", GetString(STR_WINDOW_TITLE));
 		return false;
 	}
 	builder = gtk_builder_new_from_file("ui/prefs-editor.ui");
@@ -656,7 +553,7 @@ bool PrefsEditor(void)
 enum {
 	COLUMN_PATH,
 	COLUMN_SIZE,
-	COLUMN_READONLY,
+	COLUMN_CDROM,
 	N_COLUMNS
 };
 
@@ -698,7 +595,7 @@ static void cb_add_volume_response (GtkWidget *chooser, int response)
 		gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
 				COLUMN_PATH, g_file_get_path(volume),
 				COLUMN_SIZE, get_file_size(volume),
-				COLUMN_READONLY, has_file_ext(volume, ".iso"),
+				COLUMN_CDROM, has_file_ext(volume, ".iso"),
 				-1);
 		g_object_unref(volume);
 	}
@@ -711,8 +608,8 @@ static void cb_add_volume (GSimpleAction *action, GVariant *parameter, gpointer 
 	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_ADD_VOLUME_TITLE),
 							GTK_WINDOW(win),
 							GTK_FILE_CHOOSER_ACTION_OPEN,
-							"Cancel", GTK_RESPONSE_CANCEL,
-							"Add", GTK_RESPONSE_ACCEPT,
+							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
+							GetString(STR_SELECT_BUTTON), GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
 	gtk_window_set_modal(GTK_WINDOW(chooser), true);
@@ -765,8 +662,8 @@ static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_CREATE_VOLUME_TITLE),
 							GTK_WINDOW(win),
 							GTK_FILE_CHOOSER_ACTION_SAVE,
-							"Cancel", GTK_RESPONSE_CANCEL,
-							"Create", GTK_RESPONSE_ACCEPT,
+							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
+							GetString(STR_CREATE_BUTTON), GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(chooser), TRUE);
 	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
@@ -809,20 +706,19 @@ static void cb_remove_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	}
 }
 
-static void cb_readonly (GtkCellRendererToggle *cell, gchar *path_str, gpointer data)
+static void cb_cdrom (GtkCellRendererToggle *cell, gchar *path_str, gpointer data)
 {
 	GtkTreeIter iter;
 	GtkTreePath *path = gtk_tree_path_new_from_string (path_str);
-	gboolean read_only;
-	gboolean new_value = true;
-	char *name;
+	bool cd_rom;
+	bool new_value = true;
 
 	gtk_tree_model_get_iter (volume_store, &iter, path);
-	gtk_tree_model_get (volume_store, &iter, COLUMN_READONLY, &read_only, -1);
+	gtk_tree_model_get (volume_store, &iter, COLUMN_CDROM, &cd_rom, -1);
 
-	read_only ^= 1;
+	cd_rom ^= 1;
 
-	gtk_list_store_set (GTK_LIST_STORE (volume_store), &iter, COLUMN_READONLY, read_only, -1);
+	gtk_list_store_set (GTK_LIST_STORE (volume_store), &iter, COLUMN_CDROM, cd_rom, -1);
 	gtk_tree_path_free (path);
 }
 
@@ -832,29 +728,26 @@ static void save_volumes (void)
 	GtkTreePath *path;
 	while (PrefsFindString("disk"))
 		PrefsRemoveItem("disk");
-	if(gtk_tree_model_get_iter_first(volume_store, &toplevel))
+	while (PrefsFindString("cdrom"))
+		PrefsRemoveItem("cdrom");
+	if (gtk_tree_model_get_iter_first(volume_store, &toplevel))
 	{
-		const char *path;
-		do {
-			gboolean read_only = true;
-			gtk_tree_model_get(volume_store, &toplevel, COLUMN_READONLY, &read_only, -1);
+		do
+		{
+			const char *path;
+			gboolean cd_rom = true;
+			gtk_tree_model_get(volume_store, &toplevel, COLUMN_CDROM, &cd_rom, -1);
 			gtk_tree_model_get(volume_store, &toplevel, COLUMN_PATH, &path, -1);
-			if (read_only)
-			{
-				char str[256];
-				snprintf(str, 255, "*%s", path);
-				PrefsAddString("disk", str);
-			}
+			if (cd_rom)
+				PrefsAddString("cdrom", path);
 			else
-			{
 				PrefsAddString("disk", path);
-			}
 		}
 		while (gtk_tree_model_iter_next(volume_store, &toplevel));
 	}
 }
 
-// Gets the list of volumes from the prefs file and adds them to the list store
+// Gets the list of disks and cdroms from the prefs file and adds them to the list store
 static GtkTreeModel *get_volumes (void)
 {
 	const char *str;
@@ -871,7 +764,17 @@ static GtkTreeModel *get_volumes (void)
 			gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
 				COLUMN_PATH, str + read_only,
 				COLUMN_SIZE, get_file_size(g_file_new_for_path(str + read_only)),
-				COLUMN_READONLY, read_only,
+				COLUMN_CDROM, read_only,
+				-1);
+	}
+	index = 0;
+	while ((str = (const char *)PrefsFindString("cdrom", index++)) != NULL)
+	{
+		gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
+			gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
+				COLUMN_PATH, str,
+				COLUMN_SIZE, get_file_size(g_file_new_for_path(str)),
+				COLUMN_CDROM, true,
 				-1);
 	}
 	return volume_store;
@@ -896,13 +799,13 @@ static GtkWidget *create_tree_view (void)
 	gtk_tree_view_column_add_attribute(col, renderer, "text", COLUMN_PATH);
 
 	col = gtk_tree_view_column_new();
-	gtk_tree_view_column_set_title(col, "ISO");
+	gtk_tree_view_column_set_title(col, "CD-ROM");
 	gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
 	renderer = gtk_cell_renderer_toggle_new();
 	g_signal_connect (renderer, "toggled",
-	                  G_CALLBACK (cb_readonly), NULL);
+	                  G_CALLBACK (cb_cdrom), NULL);
 	gtk_tree_view_column_pack_start(col, renderer, TRUE);
-	gtk_tree_view_column_add_attribute(col, renderer, "active", COLUMN_READONLY);
+	gtk_tree_view_column_add_attribute(col, renderer, "active", COLUMN_CDROM);
 
 	col = gtk_tree_view_column_new();
 	gtk_tree_view_column_set_title(col, "Size");
@@ -961,8 +864,10 @@ static int display_type;
 static int dis_width, dis_height;
 static bool is_fbdev_dga_mode = false;
 
+extern "C" {
+
 // User changed the hotkey combination
-extern "C" void cb_hotkey (GtkWidget *widget)
+void cb_hotkey (GtkWidget *widget)
 {
 	GtkToggleButton *ctrl = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "ctrl-hotkey"));
 	GtkToggleButton *alt = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "alt-hotkey"));
@@ -975,15 +880,31 @@ extern "C" void cb_hotkey (GtkWidget *widget)
 	PrefsReplaceInt32("hotkey", hotkey);
 }
 
-// Saves the new ram size preference
-extern "C" void cb_ramsize (GtkWidget *widget)
+// Adds the MB suffix to the value entered by the user
+void cb_format_mb (GtkWidget *widget)
 {
-	int size_bytes = atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget))) << 20;
-	PrefsReplaceInt32("ramsize", size_bytes);
+	int size_mb = atoi(gtk_entry_get_text(GTK_ENTRY(widget)));
+	if (size_mb < 4)
+		size_mb = 4;
+	if (size_mb > 1024)
+		size_mb = 1024;
+	g_autofree gchar *text = g_strdup_printf("%d MB", size_mb);
+	gtk_entry_set_text(GTK_ENTRY(widget), text);
+}
+
+// Saves the new ram size preference
+void cb_ramsize (GtkWidget *widget)
+{
+	int size_mb = atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget)));
+	if (size_mb > 4 && size_mb < 1024)
+	{
+		int size_bytes = size_mb << 20;
+		PrefsReplaceInt32("ramsize", size_bytes);
+	}
 }
 
 // Saves the new cpu and fpu preferences
-extern "C" void cb_cpu (GtkWidget *widget)
+void cb_cpu (GtkWidget *widget)
 {
 	int value = atoi(gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget)));
 	int cpu = value >> 1;
@@ -995,43 +916,49 @@ extern "C" void cb_cpu (GtkWidget *widget)
 }
 
 // Save the id of the selected combo box item to its associated preference
-extern "C" void cb_combo_int (GtkWidget *widget)
+void cb_combo_int (GtkWidget *widget)
 {
 	PrefsReplaceInt32(gtk_widget_get_name(widget), atoi(gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget))));
 }
 
-extern "C" void cb_combo_str (GtkWidget *widget)
+void cb_combo_str (GtkWidget *widget)
 {
 	PrefsReplaceString(gtk_widget_get_name(widget), gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget)));
 }
 
 // Save the value of the combo box entry to its associated preference
-extern "C" void cb_combo_entry_int (GtkWidget *widget)
+void cb_combo_entry_int (GtkWidget *widget)
 {
 	PrefsReplaceInt32(gtk_widget_get_name(widget),
 	                  atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget))));
 }
 
-extern "C" void cb_combo_entry_str (GtkWidget *widget)
+void cb_combo_entry_str (GtkWidget *widget)
 {
 	PrefsReplaceString(gtk_widget_get_name(widget),
 	                   gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget)));
 }
 
 // Save the value of the spin button to its associated preference
-extern "C" void cb_spin_button (GtkWidget *widget)
+void cb_spin_button (GtkWidget *widget)
 {
 	PrefsReplaceInt32(gtk_widget_get_name(widget), gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)));
 }
 
 // Save the value of the check box to its associated preference
-extern "C" void cb_check_box (GtkWidget *widget)
+void cb_check_box (GtkWidget *widget)
 {
 	PrefsReplaceBool(gtk_widget_get_name(widget), gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
 }
 
+// Save the value of the check box (inverted) to its associated preference
+void cb_check_box_inv (GtkWidget *widget)
+{
+	PrefsReplaceBool(gtk_widget_get_name(widget), !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+}
+
 // Save the contents of the entry to its associated preference
-extern "C" void cb_entry (GtkWidget *widget)
+void cb_entry (GtkWidget *widget)
 {
 	if (gtk_entry_get_text_length(GTK_ENTRY(widget)))
 		PrefsReplaceString(gtk_widget_get_name(widget), gtk_entry_get_text(GTK_ENTRY(widget)));
@@ -1040,7 +967,7 @@ extern "C" void cb_entry (GtkWidget *widget)
 }
 
 // Display the info bar
-extern "C" void cb_infobar_show (GtkWidget *widget)
+void cb_infobar_show (GtkWidget *widget)
 {
 #if GTK_CHECK_VERSION(3,22,29)
     /* Workaround for the fact that having the revealed property in the XML is not valid
@@ -1057,7 +984,7 @@ extern "C" void cb_infobar_show (GtkWidget *widget)
 }
 
 // Close the info bar
-extern "C" void cb_infobar_hide (GtkWidget *widget)
+void cb_infobar_hide (GtkWidget *widget)
 {
 #if GTK_CHECK_VERSION(3,22,29)
 	gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
@@ -1066,7 +993,7 @@ extern "C" void cb_infobar_hide (GtkWidget *widget)
 #endif
 }
 
-extern "C" void cb_swap_opt_cmd (GtkWidget *widget)
+void cb_swap_opt_cmd (GtkWidget *widget)
 {
 	bool swapped = PrefsFindBool("swap_opt_cmd");
 	GtkLabel *opt_label = GTK_LABEL(gtk_builder_get_object(builder, "opt-label"));
@@ -1074,6 +1001,8 @@ extern "C" void cb_swap_opt_cmd (GtkWidget *widget)
 	gtk_label_set_text(opt_label, swapped ? "Super" : "Alt");
 	gtk_label_set_text(cmd_label, swapped ? "Alt" : "Super");
 }
+
+} // extern "C"
 
 // Read and convert graphics preferences
 static void get_graphics_settings (void)
@@ -1140,20 +1069,17 @@ static void get_graphics_settings (void)
 	if (dis_height == screen_height)
 		dis_height = 0;
 
-	if(display_type == DISPLAY_SCREEN)
+	if (display_type == DISPLAY_SCREEN)
 		gtk_combo_box_set_active(screen_mode, 1);
-	char val[32];
-	sprintf(val, "%d", dis_width);
-	if(!gtk_combo_box_set_active_id(screen_x, val))
+	g_autofree gchar *width_str = g_strdup_printf("%d", dis_width);
+	if (!gtk_combo_box_set_active_id(screen_x, width_str))
 	{
-		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(screen_x), val, val);
-		gtk_combo_box_set_active_id(screen_x, val);
+		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(screen_x))), width_str);
 	}
-	sprintf(val, "%d", dis_height);
-	if(!gtk_combo_box_set_active_id(screen_y, val))
+	g_autofree gchar *height_str = g_strdup_printf("%d", dis_height);
+	if (!gtk_combo_box_set_active_id(screen_y, height_str))
 	{
-		gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(screen_y), val, val);
-		gtk_combo_box_set_active_id(screen_y, val);
+		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(screen_y))), height_str);
 	}
 
 }
@@ -1179,8 +1105,7 @@ static GList *add_serial_names (void)
 #else
 			if (false) {
 #endif
-				char *str = new char[64];
-				sprintf(str, "/dev/%s", de->d_name);
+				g_autofree gchar *str = g_strdup_printf("/dev/%s", de->d_name);
 				glist = g_list_append(glist, str);
 			}
 		}
@@ -1264,8 +1189,7 @@ static void dl_destroyed (void)
 
 static void display_alert (int title_id, int prefix_id, int button_id, const char *text)
 {
-	char str[256];
-	sprintf(str, GetString(prefix_id), text);
+	g_autofree gchar *str = g_strdup_printf(GetString(prefix_id), text);
 
 	GtkWidget *dialog = gtk_dialog_new();
 	gtk_window_set_title(GTK_WINDOW(dialog), GetString(title_id));
@@ -1375,8 +1299,7 @@ static void sigchld_handler (int sig, siginfo_t *sip, void *)
 		status |= -1 ^0xff;
 
 	if (status < 0) {	// negative -> execlp/-errno
-		char str[256];
-		sprintf(str, GetString(STR_NO_B2_EXE_FOUND), g_app_path, strerror(-status));
+		g_autofree gchar str = g_strdup_printf(GetString(STR_NO_B2_EXE_FOUND), g_app_path, strerror(-status));
 		ErrorAlert(str);
 		status = 1;
 	}
@@ -1406,8 +1329,7 @@ int main (int argc, char *argv[])
 
 	// Transfer control to the executable
 	if (start) {
-		char gui_connection_path[64];
-		sprintf(gui_connection_path, "/org/SheepShaver/GUI/%d", getpid());
+		g_autofree gchar *gui_connection_path = g_strdup_printf("/org/SheepShaver/GUI/%d", getpid());
 
 		// Catch exits from the child process
 		struct sigaction sigchld_sa, old_sigchld_sa;
@@ -1415,8 +1337,7 @@ int main (int argc, char *argv[])
 		sigchld_sa.sa_sigaction = sigchld_handler;
 		sigchld_sa.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
 		if (sigaction(SIGCHLD, &sigchld_sa, &old_sigchld_sa) < 0) {
-			char str[256];
-			sprintf(str, GetString(STR_SIG_INSTALL_ERR), SIGCHLD, strerror(errno));
+			g_autofree gchar *str = g_strdup_printf(GetString(STR_SIG_INSTALL_ERR), SIGCHLD, strerror(errno));
 			ErrorAlert(str);
 			return 1;
 		}
@@ -1427,8 +1348,7 @@ int main (int argc, char *argv[])
 		if ((p = strstr(g_app_path, "SheepShaverGUI.app/Contents/MacOS")) != NULL) {
 			strcpy(p, "SheepShaver.app/Contents/MacOS/SheepShaver");
 			if (access(g_app_path, X_OK) < 0) {
-				char str[256];
-				sprintf(str, GetString(STR_NO_B2_EXE_FOUND), g_app_path, strerror(errno));
+				g_autofree gchar *str = g_strdup_printf(GetString(STR_NO_B2_EXE_FOUND), g_app_path, strerror(errno));
 				WarningAlert(str);
 				strcpy(g_app_path, "/Applications/SheepShaver.app/Contents/MacOS/SheepShaver");
 			}

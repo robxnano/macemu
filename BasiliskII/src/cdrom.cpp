@@ -301,8 +301,8 @@ static bool position2msf(const cdrom_drive_info &info, uint16 postype, uint32 po
 
 void CDROMInit(void)
 {
-	// No drives specified in prefs? Then add defaults
-	if (PrefsFindString("cdrom", 0) == NULL) {
+	// Add real CD-ROM drives
+	if (!PrefsFindBool("nocdrom")) {
 		SysAddCDROMPrefs();
 	}
 	
