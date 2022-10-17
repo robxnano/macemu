@@ -1724,7 +1724,8 @@ for most non-Apple keyboards</property>
                     <child internal-child="entry">
                       <object class="GtkEntry">
                         <property name="can-focus">True</property>
-                        <signal name="focus-out-event" handler="cb_format_mb" swapped="no"/>
+                        <signal name="activate" handler="cb_format_ramsize" swapped="no"/>
+                        <signal name="focus-out-event" handler="cb_format_ramsize" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -1902,17 +1903,6 @@ for most non-Apple keyboards</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="jitcachesize-label">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Translation cache size (KB):</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">3</property>
-                  </packing>
-                </child>
-                <child>
                   <object class="GtkCheckButton" id="jitlazyflush">
                     <property name="label" translatable="yes">Enable lazy invalidation of translation cache</property>
                     <property name="name">jitlazyflush</property>
@@ -1925,7 +1915,7 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">4</property>
+                    <property name="top-attach">3</property>
                     <property name="width">2</property>
                   </packing>
                 </child>
@@ -1942,8 +1932,19 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">5</property>
+                    <property name="top-attach">4</property>
                     <property name="width">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="jitcachesize-label">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Translation cache size:</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">5</property>
                   </packing>
                 </child>
                 <child>
@@ -1955,21 +1956,16 @@ for most non-Apple keyboards</property>
                     <property name="active">3</property>
                     <property name="has-entry">True</property>
                     <items>
-                      <item id="2048" translatable="yes">2048</item>
-                      <item id="4096" translatable="yes">4096</item>
-                      <item id="8192" translatable="yes">8192</item>
-                      <item id="16384" translatable="yes">16384</item>
+                      <item id="2" translatable="yes">2 MB</item>
+                      <item id="4" translatable="yes">4 MB</item>
+                      <item id="8" translatable="yes">8 MB</item>
+                      <item id="16" translatable="yes">16 MB</item>
                     </items>
-                    <signal name="changed" handler="cb_combo_entry_int" swapped="no"/>
-                    <child internal-child="entry">
-                      <object class="GtkEntry">
-                        <property name="can-focus">True</property>
-                      </object>
-                    </child>
+                    <signal name="changed" handler="cb_jitcachesize" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">3</property>
+                    <property name="top-attach">5</property>
                   </packing>
                 </child>
               </object>
@@ -2002,6 +1998,9 @@ for most non-Apple keyboards</property>
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
                     <property name="action-name">win.start</property>
+                    <style>
+                      <class name="suggested-action"/>
+                    </style>
                   </object>
                   <packing>
                     <property name="expand">True</property>

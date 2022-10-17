@@ -35,7 +35,7 @@
 #include "xpram.h"
 #include "prefs.h"
 #include "prefs_editor.h"
-#include "g_resources.h"
+#include "g_resource.h"
 
 #if defined(USE_SDL_AUDIO) || defined(USE_SDL_VIDEO)
 #include <SDL.h>
@@ -61,48 +61,67 @@ static GtkTreeModel *volume_store;
 static GtkTreeIter toplevel;
 static GtkTreeSelection *selection;
 
-// Prototypes
 
-static GtkWidget *create_tree_view (void);
-static void cb_add_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
-static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
-static void cb_remove_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
+struct opt_desc {
+	int label_id;
+	GCallback func;
+};
+
+struct combo_desc {
+	int label_id;
+};
+
+#ifdef SHEEPSHAVER
+#define G_RES_PATH "/net/cebix/SheepShaver/"
+#define ABOUT_COPYRIGHT "© 1997-2008 Christian Bauer and Marc Hellwig"
+const char *authors[] = {"Christian Bauer", "Marc Hellwig", "Gwenolé Beauchesne", NULL};
+#else
+#define G_RES_PATH "/net/cebix/BasiliskII/"
+#define ABOUT_COPYRIGHT "© 1997-2008 Christian Bauer et al."
+const char *authors[] = {
+	"Christian Bauer", "Orlando Bassotto", "Gwenolé Beauchesne", "Marc Chabanas", "Marc Hellwig",
+	"Bill Huey", "Brian J. Johnson", "Jürgen Lachmann", "Samuel Lander", "David Lawrence",
+	"Lauri Pesonen", "Bernd Schmidt", "and others", NULL };
+#endif
 
 #if REAL_ADDRESSING
-const char* INFO_ADDRESSING = "Addressing mode: Real";
+#define ABOUT_MODE "Addressing mode: Real"
 #else
-const char* INFO_ADDRESSING = "Addressing mode: Direct";
+#define ABOUT_MODE "Addressing mode: Direct"
 #endif
 
 #if defined(USE_SDL_AUDIO) && defined(USE_SDL_VIDEO)
 #if SDL_VERSION_ATLEAST(2,0,0)
-const char* INFO_VIDEO = "SDL 2 audio";
+#define ABOUT_VIDEO "SDL 2 audio"
 #else
-const char* INFO_VIDEO = "SDL 1.2 audio";
+#define ABOUT_VIDEO "SDL 1.2 audio"
 #endif
-const char* INFO_AUDIO = "video";
+#define ABOUT_AUDIO "video"
 #else
 #ifdef USE_SDL_AUDIO
 #if SDL_VERSION_ATLEAST(2,0,0)
-const char* INFO_AUDIO = "SDL 2 audio";
+#define ABOUT_AUDIO "SDL 2 audio"
 #else
-const char* INFO_AUDIO = "SDL 1.2 audio";
+#define ABOUT_AUDIO "SDL 1.2 audio"
 #endif
 #elif defined(ESD_AUDIO)
-const char* INFO_AUDIO = "ESD audio";
+#define ABOUT_AUDIO "ESD audio"
 #else
-const char* INFO_AUDIO = "no audio";
+#define ABOUT_AUDIO "no audio"
 #endif
 #ifdef USE_SDL_VIDEO
 #if SDL_VERSION_ATLEAST(2,0,0)
-const char* INFO_VIDEO = "SDL 2 video";
+#define ABOUT_VIDEO "SDL 2 video"
 #else
-const char* INFO_VIDEO = "SDL 1.2 video";
+#define ABOUT_VIDEO "SDL 1.2 video"
 #endif
 #else
-const char* INFO_VIDEO = "X11 video";
+#define ABOUT_VIDEO "X11 video"
 #endif
 #endif
+
+const gchar *sysinfo = ABOUT_MODE "\nBuilt with " ABOUT_VIDEO " and " ABOUT_AUDIO "\n" ABOUT_COPYRIGHT;
+const gchar *version = g_strdup_printf("%d.%d", VERSION_MAJOR, VERSION_MINOR);
 
 #if !GLIB_CHECK_VERSION(2,44,0)
 #define g_auto
@@ -114,15 +133,76 @@ const char* INFO_VIDEO = "X11 video";
  *  Utility functions
  */
 
+// The widgets from prefs-editor.ui that need their values set on launch
+const char *check_boxes[] = {
+	"udptunnel", "keycodes", "ignoresegv", "idlewait","jit", "jitfpu", "jitinline",
+	"jitlazyflush", "jit68k", "gfxaccel", "swap_opt_cmd", NULL };
+const char *inv_check_boxes[] = { "nocdrom", "nosound", "nogui", NULL };
+const char *entries[] = {
+	"extfs", "dsp", "mixer", "keycodefile", "scsi0", "scsi1", "scsi2", "scsi3", "scsi4",
+	"scsi5", "scsi6", "rom", NULL };
+const char *spin_buttons[] = { "mousewheellines", "udpport", NULL };
+const char *id_combos[] = { "bootdriver", "frameskip", "mousewheelmode", "modelid", NULL };
+const char *text_combos[] = { "ramsize", NULL };
 
-struct opt_desc {
-	int label_id;
-	GCallback func;
-};
+// Set initial widget states
+static void set_initial_prefs(void)
+{
+    const char **id = check_boxes;
+	while (*id)
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, *id)),
+		                             PrefsFindBool(*id));
+		id++;
+	}
 
-struct combo_desc {
-	int label_id;
-};
+    id = inv_check_boxes;
+	while(*id)
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, *id)),
+		                             !PrefsFindBool(*id));
+		id++;
+	}
+	cb_swap_opt_cmd(NULL);
+
+    id = entries;
+	while (*id)
+	{
+		if (PrefsFindString(*id) != NULL)
+			gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(builder, *id)),
+			                   PrefsFindString(*id));
+		id++;
+	}
+
+	id = spin_buttons;
+	while (*id)
+	{
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, *id)),
+		                          PrefsFindInt32(*id));
+		id++;
+	}
+
+	id = id_combos;
+	while (*id)
+	{
+		g_autofree gchar *str = g_strdup_printf("%d", PrefsFindInt32(*id));
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(gtk_builder_get_object(builder, *id)), str);
+		id++;
+	}
+
+	GtkComboBoxText *combo;
+	id = text_combos;
+	while (*id)
+	{
+		const char *pref_str = PrefsFindString(*id);
+		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, *id));
+		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), pref_str))
+		{
+			gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), pref_str);
+		}
+		id++;
+	}
+}
 
 // User closed the file chooser dialog, possibly selecting a file
 static void cb_browse_response(GtkWidget *chooser, int response, GtkEntry *entry)
@@ -204,8 +284,19 @@ static void set_ramsize_combo_box(void)
 	const char *name = "ramsize";
 	int size_mb = PrefsFindInt32(name) >> 20;
 	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, name));
-	char id[32];
-	snprintf(id, 32, "%d MB", size_mb);
+	g_autofree gchar *id = g_strdup_printf("%d MB", size_mb);
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id))
+	{
+		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), id);
+	}
+}
+
+static void set_jitcachesize_combo_box(void)
+{
+	const char *name = "jitcachesize";
+	int size_mb = PrefsFindInt32(name) >> 10;
+	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, name));
+	g_autofree gchar *id = g_strdup_printf("%d MB", size_mb);
 	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id))
 	{
 		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), id);
@@ -307,75 +398,9 @@ extern "C" void dl_quit(GtkWidget *dialog)
 	g_object_unref(dialog);
 }
 
-// Set initial widget states
-static void set_initial_prefs(void)
-{
-	const char *check_boxes[] = {
-		"udptunnel", "keycodes", "ignoresegv", "idlewait",
-		"jit", "jitfpu", "jitinline", "jitlazyflush","jit68k", "gfxaccel", "swap_opt_cmd" };
-	for (int i = 0; i < 11; i++)
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, check_boxes[i])),
-		                             PrefsFindBool(check_boxes[i]));
-
-	const char *inv_check_boxes[] = { "nocdrom", "nosound", "nogui" };
-	for (int i = 0; i < 3; i++)
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, inv_check_boxes[i])),
-		                             !PrefsFindBool(inv_check_boxes[i]));
-	cb_swap_opt_cmd(NULL);
-
-	const char *entries[] = {
-		"extfs", "dsp", "mixer", "keycodefile", "scsi0", "scsi1", "scsi2", "scsi3", "scsi4", "scsi5", "scsi6", "rom"};
-	for (int i = 0; i < 12; i++)
-		if (PrefsFindString(entries[i]) != NULL)
-			gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(builder, entries[i])),
-			                   PrefsFindString(entries[i]));
-
-	const char *spin_buttons[] = {"mousewheellines", "udpport"};
-	for (int i = 0; i < 2; i++)
-		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, spin_buttons[i])),
-		                          PrefsFindInt32(spin_buttons[i]));
-
-	const char *id_combos[] = {"bootdriver", "frameskip", "mousewheelmode", "modelid"};
-	for (int i = 0; i < 4; i++)
-	{
-		g_autofree gchar *str = g_strdup_printf("%d", PrefsFindInt32(id_combos[i]));
-		gtk_combo_box_set_active_id(GTK_COMBO_BOX(gtk_builder_get_object(builder, id_combos[i])), str);
-	}
-
-	const char *text_combos[] = {"ramsize"};
-	GtkComboBoxText *combo;
-	for (int i = 0; i < 1; i++)
-	{
-		const char *pref_str = PrefsFindString(text_combos[i]);
-		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, text_combos[i]));
-		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), pref_str))
-		{
-			gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), pref_str);
-		}
-	}
-
-	const char *int_combos[] = {"jitcachesize"};
-	for (int i = 0; i < 1; i++)
-	{
-		combo = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, int_combos[i]));
-		g_autofree gchar *str = g_strdup_printf("%d", PrefsFindInt32(int_combos[i]));
-		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), str))
-		{
-			gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(combo))), str);
-		}
-	}
-}
-
 // "About" selected
 static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	g_autofree gchar *sysinfo = g_strdup_printf("%s\nBuilt with %s and %s\n\%s",
-	        INFO_ADDRESSING,
-	        INFO_VIDEO,
-	        INFO_AUDIO,
-	        GetString(STR_ABOUT_COPYRIGHT));
-	g_autofree gchar *version = g_strdup_printf("%d.%d", VERSION_MAJOR, VERSION_MINOR);
-	const char *authors[512] = {"Christian Bauer <cb@cebix.net>", "Marc Hellwig", "Gwenole Beauchesne", NULL};
 	gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
 	                      "copyright", sysinfo,
 	                      "authors", authors,
@@ -423,7 +448,7 @@ static void bind_sensitivity(const char *source_name, const char *target_name, G
 
 static void set_file_menu(GtkApplication *app)
 {
-	GtkBuilder *menubuilder = gtk_builder_new_from_file("ui/menu.ui");
+	GtkBuilder *menubuilder = gtk_builder_new_from_resource(G_RES_PATH "ui/menu.ui");
 	gtk_application_set_menubar(app, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu")));
 	g_object_unref(menubuilder);
 }
@@ -431,7 +456,7 @@ static void set_file_menu(GtkApplication *app)
 static void set_help_overlay (GtkApplicationWindow *win)
 {
 #if GTK_CHECK_VERSION(3,20,0)
-	GtkBuilder *helpbuilder = gtk_builder_new_from_file("ui/help-overlay.ui");
+	GtkBuilder *helpbuilder = gtk_builder_new_from_resource(G_RES_PATH "ui/help-overlay.ui");
 	gtk_application_window_set_help_overlay(win,
 	                                        GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
 	g_object_unref(helpbuilder);
@@ -451,7 +476,7 @@ bool PrefsEditor(void)
 		printf("Another instance of %s is running, quitting...\n", GetString(STR_WINDOW_TITLE));
 		return false;
 	}
-	builder = gtk_builder_new_from_file("ui/prefs-editor.ui");
+	builder = gtk_builder_new_from_resource(G_RES_PATH"ui/prefs-editor.ui");
 	set_file_menu(GTK_APPLICATION(app));
 
 	// Create window
@@ -460,6 +485,7 @@ bool PrefsEditor(void)
 	gtk_application_add_window(GTK_APPLICATION(app), GTK_WINDOW(win));
 	set_initial_prefs();
 	set_ramsize_combo_box();
+	set_jitcachesize_combo_box();
 	set_hotkey_buttons();
 	set_cpu_combo_box();
 	gtk_builder_connect_signals(builder, NULL);
@@ -710,8 +736,8 @@ static void cb_cdrom (GtkCellRendererToggle *cell, gchar *path_str, gpointer dat
 {
 	GtkTreeIter iter;
 	GtkTreePath *path = gtk_tree_path_new_from_string (path_str);
-	bool cd_rom;
-	bool new_value = true;
+	gboolean cd_rom;
+	gboolean new_value = true;
 
 	gtk_tree_model_get_iter (volume_store, &iter, path);
 	gtk_tree_model_get (volume_store, &iter, COLUMN_CDROM, &cd_rom, -1);
@@ -881,7 +907,7 @@ void cb_hotkey (GtkWidget *widget)
 }
 
 // Adds the MB suffix to the value entered by the user
-void cb_format_mb (GtkWidget *widget)
+void cb_format_ramsize (GtkWidget *widget)
 {
 	int size_mb = atoi(gtk_entry_get_text(GTK_ENTRY(widget)));
 	if (size_mb < 4)
@@ -896,10 +922,33 @@ void cb_format_mb (GtkWidget *widget)
 void cb_ramsize (GtkWidget *widget)
 {
 	int size_mb = atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget)));
-	if (size_mb > 4 && size_mb < 1024)
+	if (size_mb >= 4 && size_mb <= 1024)
 	{
 		int size_bytes = size_mb << 20;
 		PrefsReplaceInt32("ramsize", size_bytes);
+	}
+}
+
+// Adds the MB suffix to the value entered by the user
+void cb_format_jitcachesize (GtkWidget *widget)
+{
+	int size_mb = atoi(gtk_entry_get_text(GTK_ENTRY(widget)));
+	if (size_mb < 1)
+		size_mb = 1;
+	if (size_mb > 128)
+		size_mb = 16;
+	g_autofree gchar *text = g_strdup_printf("%d MB", size_mb);
+	gtk_entry_set_text(GTK_ENTRY(widget), text);
+}
+
+// Saves the new JIT cache size preference
+void cb_jitcachesize (GtkWidget *widget)
+{
+	int size_mb = atoi(gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget)));
+	if (size_mb >= 1 && size_mb <= 128)
+	{
+		int size_kb = size_mb << 10;
+		PrefsReplaceInt32("jitcachesize", size_kb);
 	}
 }
 
@@ -1413,4 +1462,3 @@ int main (int argc, char *argv[])
 	return 0;
 }
 #endif
-

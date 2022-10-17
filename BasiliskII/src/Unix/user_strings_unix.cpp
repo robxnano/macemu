@@ -96,9 +96,17 @@ user_string_def platform_strings[] = {
 	{STR_IGNORESEGV_CTRL, "Ignore Illegal Memory Accesses"},
 
 	{STR_NO_B2_EXE_FOUND, "Could not start %s (%s)."},
-	{STR_ABOUT_COPYRIGHT, "© 1997-2008 Christian Bauer et al."},
-	{STR_ABOUT_LICENSE, "Basilisk II comes with ABSOLUTELY NO WARRANTY. \
-This is free software, and you are welcome to redistribute it under the terms of the GNU General Public License."},
+	{STR_ABOUT_LICENSE, "Basilisk II is free software; you can redistribute it and/or modify \
+it under the terms of the GNU General Public License as published by \
+the Free Software Foundation; either version 2 of the License, or \
+(at your option) any later version.\n\n\
+Basilisk II is distributed in the hope that it will be useful, \
+but WITHOUT ANY WARRANTY; without even the implied warranty of \
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the \
+GNU General Public License for more details.\n\n\
+You should have received a copy of the GNU General Public License \
+along with this program; if not, write to the Free Software \
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA"},
 	{STR_ABOUT_COMMENTS, "Open source 68k Mac emulator"},
 	{STR_ABOUT_WEBSITE, "http://basiliskii.cebix.net"},
 	{STR_ABOUT_WEBSITE_LABEL, "Website"},

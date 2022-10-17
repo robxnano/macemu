@@ -454,16 +454,23 @@ if [[ "x$WANT_GTK" = "xgtk3" ]]; then
     GUI_CFLAGS="$GTK_CFLAGS"
     GUI_LIBS="$GTK_LIBS"
     WANT_GTK=gtk3
+    AC_CHECK_PROG([ac_cv_gcr], [glib-compile-resources], [yes])
+    if [[ "$ac_cv_gcr" = "yes" ]]; then
+      GCR="glib-compile-resources"
+    else
+      AC_MSG_ERROR([glib-compile-resources not found.])
+    fi
   ], [
     AC_MSG_WARN([Could not find GTK+ 3, disabling user interface.])
   ])
 fi
 if [[ "x$WANT_GTK" != "xno" -a "x$WANT_STANDALONE_GUI" = "xno" ]]; then
   AC_DEFINE(ENABLE_GTK, 1, [Define if using GTK.])
-  UISRCS="prefs_editor_gtk.cpp g_resources.cpp"
+  UISRCS="prefs_editor_gtk.cpp g_resource.cpp"
 fi
 AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
+AC_SUBST(GCR)
 
 dnl Build external GUI if requested.
 if [[ "$WANT_STANDALONE_GUI" != "yes" ]]; then
