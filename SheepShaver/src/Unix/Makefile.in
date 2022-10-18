@@ -49,7 +49,7 @@ USE_BINCUE = @USE_BINCUE@
 STANDALONE_GUI = @STANDALONE_GUI@
 GUI_CFLAGS = @GUI_CFLAGS@
 GUI_LIBS = @GUI_LIBS@
-GUI_SRCS = ../prefs.cpp prefs_unix.cpp prefs_editor_gtk.cpp ../prefs_items.cpp \
+GUI_SRCS = ../prefs.cpp prefs_unix.cpp prefs_editor_gtk3.cpp ../prefs_items.cpp \
 	../user_strings.cpp user_strings_unix.cpp xpram_unix.cpp sys_unix.cpp rpc_unix.cpp \
 	../dummy/prefs_dummy.cpp g_resource.cpp
 
