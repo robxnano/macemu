@@ -415,6 +415,16 @@ static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_
 	                      NULL);
 }
 
+// "Help" selected
+static void mn_help (GSimpleAction *action, GVariant *parameter, gpointer user_data)
+{
+#if GTK_CHECK_VERSION(3,22,0)
+	gtk_show_uri_on_window(GTK_WINDOW(win), "https://github.com/kanjitalk755/macemu", GDK_CURRENT_TIME, NULL);
+#else
+    gtk_show_uri(gdk_screen_get_default(), "https://github.com/kanjitalk755/macemu", GDK_CURRENT_TIME, NULL);
+#endif
+}
+
 // "Zap NVRAM" selected
 static void mn_zap_pram (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
@@ -430,6 +440,7 @@ static GActionEntry win_entries[] = {
 	{ "save-settings", cb_save_settings },
 	{ "zap-pram", mn_zap_pram },
 	{ "quit", cb_quit },
+	{ "help", mn_help },
 	{ "about", mn_about },
 };
 

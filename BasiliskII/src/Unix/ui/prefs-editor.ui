@@ -2057,6 +2057,8 @@ for most non-Apple keyboards</property>
                 <property name="label" translatable="yes">_Start</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="can-default">True</property>
+                <property name="has-default">True</property>
                 <property name="receives-default">True</property>
                 <property name="action-name">win.start</property>
                 <property name="use-underline">True</property>
@@ -2081,6 +2083,7 @@ for most non-Apple keyboards</property>
             <child>
               <placeholder/>
             </child>
+            <accelerator key="F10" signal="clicked"/>
             <style>
               <class name="image-button"/>
             </style>
