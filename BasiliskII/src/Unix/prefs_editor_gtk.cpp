@@ -72,10 +72,12 @@ struct combo_desc {
 };
 
 #ifdef SHEEPSHAVER
+#define VOLUME_SIZE_DEFAULT "256"
 #define G_RES_PATH "/net/cebix/SheepShaver/"
 #define ABOUT_COPYRIGHT "© 1997-2008 Christian Bauer and Marc Hellwig"
 const char *authors[] = {"Christian Bauer", "Marc Hellwig", "Gwenolé Beauchesne", NULL};
 #else
+#define VOLUME_SIZE_DEFAULT "64"
 #define G_RES_PATH "/net/cebix/BasiliskII/"
 #define ABOUT_COPYRIGHT "© 1997-2008 Christian Bauer et al."
 const char *authors[] = {
@@ -702,7 +704,7 @@ static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	gtk_widget_show(label);
 	GtkWidget *size_entry = gtk_entry_new();
 	gtk_widget_show(size_entry);
-	gtk_entry_set_text(GTK_ENTRY(size_entry), "512");
+	gtk_entry_set_text(GTK_ENTRY(size_entry), VOLUME_SIZE_DEFAULT);
 	gtk_box_pack_end(GTK_BOX(box), size_entry, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(box), label, FALSE, FALSE, 0);
 	gtk_widget_set_hexpand(box, TRUE);

@@ -292,7 +292,7 @@ $(OBJ_DIR)/compemu8.o: compemu.cpp
 	$(CXX) $(CPPFLAGS) $(DEFS) -DPART_8 $(CXXFLAGS) -c $< -o $@
 
 g_resource.cpp: $(GRESOURCE_SRCS) $(GRESOURCE_XML)
-	$(GCR) --generate-source -C $(CXX) $(GRESOURCE_XML) --target $@
+	$(GCR) --generate-source $(GRESOURCE_XML) --target $@
 
 #-------------------------------------------------------------------------
 # DO NOT DELETE THIS LINE -- make depend depends on it.

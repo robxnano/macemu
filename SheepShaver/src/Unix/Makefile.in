@@ -286,7 +286,7 @@ test-powerpc$(EXEEXT): $(TESTOBJS)
 	$(CXX) -o $@ $(LDFLAGS) $(TESTOBJS) $(LIBS)
 
 g_resource.cpp: $(GRESOURCE_SRCS) $(GRESOURCE_XML)
-	$(GCR) --generate-source -C $(CXX) $(GRESOURCE_XML) --target $@
+	$(GCR) --generate-source $(GRESOURCE_XML) --target $@
 
 #-------------------------------------------------------------------------
 # DO NOT DELETE THIS LINE -- make depend depends on it.
