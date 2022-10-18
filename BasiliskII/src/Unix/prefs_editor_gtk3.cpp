@@ -451,6 +451,8 @@ static void bind_sensitivity(const char *source_name, const char *target_name, G
 static void set_file_menu(GtkApplication *app)
 {
 	GtkBuilder *menubuilder = gtk_builder_new_from_resource(G_RES_PATH "ui/menu.ui");
+	GtkMenuButton *menu_button = GTK_MENU_BUTTON(gtk_builder_get_object(builder, "menu-button"));
+	gtk_menu_button_set_menu_model(menu_button, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "app-menu")));
 	gtk_application_set_menubar(app, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu")));
 	g_object_unref(menubuilder);
 }
@@ -479,6 +481,9 @@ bool PrefsEditor(void)
 		return false;
 	}
 	builder = gtk_builder_new_from_resource(G_RES_PATH"ui/prefs-editor.ui");
+	bool use_headerbar = false;
+	GtkSettings *settings = gtk_settings_get_default();
+	g_object_get(settings, "gtk-dialogs-use-header", &use_headerbar, NULL);
 	set_file_menu(GTK_APPLICATION(app));
 
 	// Create window
@@ -491,7 +496,15 @@ bool PrefsEditor(void)
 	set_hotkey_buttons();
 	set_cpu_combo_box();
 	gtk_builder_connect_signals(builder, NULL);
-
+	if (use_headerbar)
+	{
+		gtk_application_window_set_show_menubar(GTK_APPLICATION_WINDOW(win), false);
+	}
+	else
+	{
+	    gtk_window_set_titlebar(GTK_WINDOW(win), NULL);
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "action-bar")));
+	}
 	set_help_overlay(GTK_APPLICATION_WINDOW(win));
 
 	gtk_window_set_title(GTK_WINDOW(win), GetString(STR_PREFS_TITLE));

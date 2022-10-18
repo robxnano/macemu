@@ -1962,6 +1962,11 @@ for most non-Apple keyboards</property>
                       <item id="16" translatable="yes">16 MB</item>
                     </items>
                     <signal name="changed" handler="cb_jitcachesize" swapped="no"/>
+                    <child internal-child="entry">
+                      <object class="GtkEntry">
+                        <property name="can-focus">False</property>
+                      </object>
+                    </child>
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
@@ -1983,8 +1988,7 @@ for most non-Apple keyboards</property>
           </packing>
         </child>
         <child>
-          <object class="GtkActionBar">
-            <property name="visible">True</property>
+          <object class="GtkActionBar" id="action-bar">
             <property name="can-focus">False</property>
             <child>
               <object class="GtkButtonBox">
@@ -2032,6 +2036,58 @@ for most non-Apple keyboards</property>
             <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">6</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="prefs-header-bar">
+        <property name="name">prefs-header-bar</property>
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="has-subtitle">False</property>
+        <property name="show-close-button">True</property>
+        <child>
+          <object class="GtkButtonBox">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkButton">
+                <property name="label" translatable="yes">_Start</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="action-name">win.start</property>
+                <property name="use-underline">True</property>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkMenuButton" id="menu-button">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="direction">none</property>
+            <child>
+              <placeholder/>
+            </child>
+            <style>
+              <class name="image-button"/>
+            </style>
+          </object>
+          <packing>
+            <property name="pack-type">end</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </object>
