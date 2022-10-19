@@ -308,6 +308,8 @@
                   <object class="GtkSeparator">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
@@ -442,7 +444,7 @@
                 <property name="margin-bottom">10</property>
                 <property name="orientation">vertical</property>
                 <child>
-                  <!-- n-columns=2 n-rows=5 -->
+                  <!-- n-columns=2 n-rows=7 -->
                   <object class="GtkGrid" id="video-pane">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
@@ -453,30 +455,11 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Video mode:</property>
+                        <property name="label" translatable="yes">Start as:</property>
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">0</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkComboBoxText" id="screen-mode">
-                        <property name="name">video-mode-combo</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="tooltip-text" translatable="yes">The initial display mode for the virtual machine</property>
-                        <property name="hexpand">True</property>
-                        <property name="active">0</property>
-                        <items>
-                          <item id="win" translatable="yes">Window</item>
-                          <item id="dga" translatable="yes">Fullscreen</item>
-                        </items>
-                        <signal name="changed" handler="cb_screen_mode" swapped="no"/>
-                      </object>
-                      <packing>
-                        <property name="left-attach">1</property>
-                        <property name="top-attach">0</property>
+                        <property name="top-attach">1</property>
                       </packing>
                     </child>
                     <child>
@@ -499,7 +482,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">1</property>
-                        <property name="top-attach">1</property>
+                        <property name="top-attach">5</property>
                       </packing>
                     </child>
                     <child>
@@ -510,7 +493,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">1</property>
+                        <property name="top-attach">5</property>
                       </packing>
                     </child>
                     <child>
@@ -539,7 +522,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">1</property>
-                        <property name="top-attach">2</property>
+                        <property name="top-attach">3</property>
                       </packing>
                     </child>
                     <child>
@@ -550,7 +533,24 @@
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">2</property>
+                        <property name="top-attach">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="gfxaccel">
+                        <property name="label" translatable="yes">QuickDraw acceleration</property>
+                        <property name="name">gfxaccel</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="halign">start</property>
+                        <property name="draw-indicator">True</property>
+                        <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">6</property>
+                        <property name="width">2</property>
                       </packing>
                     </child>
                     <child>
@@ -561,7 +561,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">3</property>
+                        <property name="top-attach">4</property>
                       </packing>
                     </child>
                     <child>
@@ -582,29 +582,86 @@
                         <signal name="changed" handler="cb_screen_mode" swapped="no"/>
                         <child internal-child="entry">
                           <object class="GtkEntry">
-                            <property name="can-focus">True</property>
+                            <property name="can-focus">False</property>
                           </object>
                         </child>
                       </object>
                       <packing>
                         <property name="left-attach">1</property>
-                        <property name="top-attach">3</property>
+                        <property name="top-attach">4</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkCheckButton" id="gfxaccel">
-                        <property name="label" translatable="yes">QuickDraw acceleration</property>
-                        <property name="name">gfxaccel</property>
+                      <object class="GtkBox">
                         <property name="visible">True</property>
-                        <property name="can-focus">True</property>
-                        <property name="receives-default">False</property>
-                        <property name="halign">start</property>
-                        <property name="draw-indicator">True</property>
-                        <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                        <property name="can-focus">False</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkRadioButton" id="screen-mode-window">
+                            <property name="label" translatable="yes">Window</property>
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">False</property>
+                            <property name="halign">start</property>
+                            <property name="active">True</property>
+                            <property name="draw-indicator">True</property>
+                            <property name="group">screen-mode-full</property>
+                            <signal name="toggled" handler="cb_screen_mode" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkRadioButton" id="screen-mode-full">
+                            <property name="label" translatable="yes">Full screen</property>
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">False</property>
+                            <property name="halign">start</property>
+                            <property name="active">True</property>
+                            <property name="draw-indicator">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">1</property>
+                        <property name="height">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">4</property>
+                        <property name="top-attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="nogui">
+                        <property name="label" translatable="yes">Show settings window on startup</property>
+                        <property name="name">nogui</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="tooltip-text" translatable="yes">You can always access the Settings by right-clicking on the launcher icon</property>
+                        <property name="halign">start</property>
+                        <property name="draw-indicator">True</property>
+                        <signal name="toggled" handler="cb_check_box_inv" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">0</property>
                         <property name="width">2</property>
                       </packing>
                     </child>
@@ -619,8 +676,8 @@
                   <object class="GtkSeparator">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="margin-top">6</property>
-                    <property name="margin-bottom">6</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -711,12 +768,12 @@
               </object>
               <packing>
                 <property name="name">graphics-pane</property>
-                <property name="title" translatable="yes">Audio/Video</property>
+                <property name="title" translatable="yes">General</property>
                 <property name="position">1</property>
               </packing>
             </child>
             <child>
-              <!-- n-columns=2 n-rows=7 -->
+              <!-- n-columns=2 n-rows=6 -->
               <object class="GtkGrid" id="keyboard-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -727,34 +784,6 @@
                 <property name="hexpand">True</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">10</property>
-                <child>
-                  <object class="GtkCheckButton" id="keycodes">
-                    <property name="label" translatable="yes">Use raw keycodes</property>
-                    <property name="name">keycodes</property>
-                    <property name="visible">True</property>
-                    <property name="can-focus">True</property>
-                    <property name="receives-default">False</property>
-                    <property name="halign">start</property>
-                    <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">0</property>
-                    <property name="width">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Keycode translation file:</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">1</property>
-                  </packing>
-                </child>
                 <child>
                   <object class="GtkBox">
                     <property name="visible">True</property>
@@ -794,7 +823,7 @@
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">1</property>
+                    <property name="top-attach">0</property>
                   </packing>
                 </child>
                 <child>
@@ -805,54 +834,7 @@
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">5</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Lines to scroll:</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">6</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkComboBoxText" id="mousewheelmode">
-                    <property name="name">mousewheelmode</property>
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="halign">start</property>
-                    <property name="hexpand">False</property>
-                    <property name="active">0</property>
-                    <items>
-                      <item id="1" translatable="yes">Cursor Up/Down</item>
-                      <item id="0" translatable="yes">Page Up/Down</item>
-                    </items>
-                    <signal name="changed" handler="cb_combo_int" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="left-attach">1</property>
-                    <property name="top-attach">5</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkSpinButton" id="mousewheellines">
-                    <property name="name">mousewheellines</property>
-                    <property name="visible">True</property>
-                    <property name="can-focus">True</property>
-                    <property name="tooltip-text" translatable="yes">Negative values invert the scroll direction</property>
-                    <property name="halign">start</property>
-                    <property name="hexpand">False</property>
-                    <property name="input-purpose">number</property>
-                    <property name="adjustment">scroll-lines-adj</property>
-                    <signal name="value-changed" handler="cb_spin_button" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="left-attach">1</property>
-                    <property name="top-attach">6</property>
+                    <property name="top-attach">4</property>
                   </packing>
                 </child>
                 <child>
@@ -935,11 +917,10 @@ See Help &gt; Keyboard Shortcuts for a full list.</property>
                     <property name="can-focus">False</property>
                     <property name="margin-top">4</property>
                     <property name="margin-bottom">4</property>
-                    <property name="hexpand">True</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">4</property>
+                    <property name="top-attach">3</property>
                     <property name="width">2</property>
                   </packing>
                 </child>
@@ -1051,8 +1032,123 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">3</property>
+                    <property name="top-attach">1</property>
                     <property name="width">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkRadioButton" id="mousewheelmode-inv">
+                        <property name="label" translatable="yes">Scrolls page</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="halign">start</property>
+                        <property name="active">True</property>
+                        <property name="draw-indicator">True</property>
+                        <property name="group">mousewheelmode</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="spacing">10</property>
+                        <child>
+                          <object class="GtkRadioButton" id="mousewheelmode">
+                            <property name="label" translatable="yes">Moves cursor:</property>
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">False</property>
+                            <property name="active">True</property>
+                            <property name="draw-indicator">True</property>
+                            <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkSpinButton" id="mousewheellines">
+                            <property name="name">mousewheellines</property>
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="tooltip-text" translatable="yes">Negative values invert the scroll direction</property>
+                            <property name="halign">start</property>
+                            <property name="hexpand">False</property>
+                            <property name="text" translatable="yes">1</property>
+                            <property name="input-purpose">number</property>
+                            <property name="adjustment">scroll-lines-adj</property>
+                            <property name="value">3</property>
+                            <signal name="value-changed" handler="cb_spin_button" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="label" translatable="yes">lines</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">4</property>
+                    <property name="height">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">5</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="keycodes">
+                    <property name="label" translatable="yes">Use keycode file:</property>
+                    <property name="name">keycodes</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">False</property>
+                    <property name="halign">start</property>
+                    <property name="draw-indicator">True</property>
+                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
                   </packing>
                 </child>
               </object>
@@ -1595,7 +1691,7 @@ for most non-Apple keyboards</property>
               </packing>
             </child>
             <child>
-              <!-- n-columns=3 n-rows=7 -->
+              <!-- n-columns=3 n-rows=13 -->
               <object class="GtkGrid" id="system-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -1682,24 +1778,6 @@ for most non-Apple keyboards</property>
                   <packing>
                     <property name="left-attach">0</property>
                     <property name="top-attach">5</property>
-                    <property name="width">3</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkCheckButton" id="nogui">
-                    <property name="label" translatable="yes">Show settings window on startup</property>
-                    <property name="name">nogui</property>
-                    <property name="visible">True</property>
-                    <property name="can-focus">True</property>
-                    <property name="receives-default">False</property>
-                    <property name="tooltip-text" translatable="yes">You can always access the Settings by right-clicking on the launcher icon</property>
-                    <property name="halign">start</property>
-                    <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box_inv" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">6</property>
                     <property name="width">3</property>
                   </packing>
                 </child>
@@ -1828,30 +1906,6 @@ for most non-Apple keyboards</property>
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-              </object>
-              <packing>
-                <property name="name">system-pane</property>
-                <property name="title" translatable="yes">System</property>
-                <property name="position">4</property>
-              </packing>
-            </child>
-            <child>
-              <!-- n-columns=2 n-rows=6 -->
-              <object class="GtkGrid" id="jit-pane">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="margin-start">10</property>
-                <property name="margin-end">10</property>
-                <property name="margin-top">10</property>
-                <property name="margin-bottom">10</property>
-                <property name="row-spacing">6</property>
-                <property name="column-spacing">10</property>
-                <child>
                   <object class="GtkCheckButton" id="jit">
                     <property name="label" translatable="yes">Enable JIT compiler</property>
                     <property name="name">jit</property>
@@ -1864,8 +1918,8 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">0</property>
-                    <property name="width">2</property>
+                    <property name="top-attach">7</property>
+                    <property name="width">3</property>
                   </packing>
                 </child>
                 <child>
@@ -1881,8 +1935,8 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">1</property>
-                    <property name="width">2</property>
+                    <property name="top-attach">8</property>
+                    <property name="width">3</property>
                   </packing>
                 </child>
                 <child>
@@ -1898,8 +1952,8 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">2</property>
-                    <property name="width">2</property>
+                    <property name="top-attach">9</property>
+                    <property name="width">3</property>
                   </packing>
                 </child>
                 <child>
@@ -1915,8 +1969,8 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">3</property>
-                    <property name="width">2</property>
+                    <property name="top-attach">10</property>
+                    <property name="width">3</property>
                   </packing>
                 </child>
                 <child>
@@ -1932,8 +1986,8 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">4</property>
-                    <property name="width">2</property>
+                    <property name="top-attach">11</property>
+                    <property name="width">3</property>
                   </packing>
                 </child>
                 <child>
@@ -1944,7 +1998,7 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">5</property>
+                    <property name="top-attach">12</property>
                   </packing>
                 </child>
                 <child>
@@ -1952,7 +2006,6 @@ for most non-Apple keyboards</property>
                     <property name="name">jitcachesize</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="halign">start</property>
                     <property name="active">3</property>
                     <property name="has-entry">True</property>
                     <items>
@@ -1970,14 +2023,36 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">5</property>
+                    <property name="top-attach">12</property>
                   </packing>
+                </child>
+                <child>
+                  <object class="GtkSeparator">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">6</property>
+                    <property name="width">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
                 </child>
               </object>
               <packing>
-                <property name="name">jit-pane</property>
-                <property name="title" translatable="yes">JIT</property>
-                <property name="position">5</property>
+                <property name="name">system-pane</property>
+                <property name="title" translatable="yes">Emulation</property>
+                <property name="position">4</property>
               </packing>
             </child>
           </object>

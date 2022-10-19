@@ -396,7 +396,8 @@ static void mn_about(...)
 	};
 	char version[64];
 	sprintf(version, "%d.%d", VERSION_MAJOR, VERSION_MINOR);
-	gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
+	gtk_show_about_dialog(GTK_WINDOW(win),
+	                     "version", version,
 	                     "copyright", GetString(STR_ABOUT_COPYRIGHT),
 	                     "authors", authors,
 	                     "comments", GetString(STR_ABOUT_COMMENTS),
@@ -573,7 +574,8 @@ static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	gtk_widget_show(label);
 	GtkWidget *size_entry = gtk_entry_new();
 	gtk_widget_show(size_entry);
-	gtk_entry_set_text(GTK_ENTRY(size_entry), "40");
+	gtk_entry_set_activates_default(GTK_ENTRY(size_entry), true);
+	gtk_entry_set_text(GTK_ENTRY(size_entry), "256");
 	gtk_box_pack_end(GTK_BOX(box), size_entry, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(box), label, FALSE, FALSE, 0);
 
@@ -1236,9 +1238,9 @@ static void create_serial_pane(GtkWidget *top)
 	gtk_widget_show(w_serialb);
 	while (glist)
 	{
-	    gtk_combo_box_append_text(GTK_COMBO_BOX(w_seriala), (gchar *)glist->data);
-	    gtk_combo_box_append_text(GTK_COMBO_BOX(w_serialb), (gchar *)glist->data);
-	    glist = glist->next;
+		gtk_combo_box_append_text(GTK_COMBO_BOX(w_seriala), (gchar *)glist->data);
+		gtk_combo_box_append_text(GTK_COMBO_BOX(w_serialb), (gchar *)glist->data);
+		glist = glist->next;
 	}
 
 	const char *str = PrefsFindString("seriala");
@@ -1262,8 +1264,8 @@ static void create_serial_pane(GtkWidget *top)
 	gtk_widget_show(w_ether);
 	while (glist)
 	{
-	    gtk_combo_box_append_text(GTK_COMBO_BOX(w_ether), (gchar *)glist->data);
-	    glist = glist->next;
+		gtk_combo_box_append_text(GTK_COMBO_BOX(w_ether), (gchar *)glist->data);
+		glist = glist->next;
 	}
 	str = PrefsFindString("ether");
 	if (str == NULL)
@@ -1377,7 +1379,7 @@ bool DarwinCDReadTOC(char *, uint8 *) { }
 
 static GCallback dl_destroyed(GtkWidget *dialog)
 {
-    gtk_widget_destroy(dialog);
+	gtk_widget_destroy(dialog);
 	gtk_main_quit();
 	return NULL;
 }
@@ -1537,7 +1539,7 @@ int main(int argc, char *argv[])
 		char *p;
 		strcpy(g_app_path, argv[0]);
 		if ((p = strstr(g_app_path, "SheepShaverGUI.app/Contents/MacOS")) != NULL) {
-		    strcpy(p, "SheepShaver.app/Contents/MacOS/SheepShaver");
+			strcpy(p, "SheepShaver.app/Contents/MacOS/SheepShaver");
 			if (access(g_app_path, X_OK) < 0) {
 				char str[256];
 				sprintf(str, GetString(STR_NO_B2_EXE_FOUND), g_app_path, strerror(errno));

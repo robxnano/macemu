@@ -506,9 +506,9 @@ int main(int argc, char **argv)
 			argv[i++] = NULL;
 			if (i < argc) {
 				if (strcmp(argv[i], "true") == 0)
-				    use_gui = false;
+					use_gui = false;
 				else
-				    use_gui = true;
+					use_gui = true;
 				argv[i] = NULL;
 			}
 		// Alternative commands to enter the GUI
@@ -559,7 +559,7 @@ int main(int argc, char **argv)
 	PrefsInit(vmdir, argc, argv);
 	// Only use nogui preference if not passed as command line argument
 	if (use_gui == -1)
-	    use_gui = !PrefsFindBool("nogui");
+		use_gui = !PrefsFindBool("nogui");
 
 	// Any command line arguments left?
 	for (int i=1; i<argc; i++) {
@@ -1054,7 +1054,7 @@ void QuitEmulator(void)
 void FlushCodeCache(void *start, uint32 size)
 {
 #if USE_JIT
-    if (UseJIT)
+	if (UseJIT)
 #ifdef UPDATE_UAE
 		flush_icache();
 #else
@@ -1107,17 +1107,17 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 		pthread_attr_setschedpolicy(attr, SCHED_FIFO);
 		struct sched_param fifo_param;
 		fifo_param.sched_priority = ((sched_get_priority_min(SCHED_FIFO) + 
-					      sched_get_priority_max(SCHED_FIFO)) / 2 +
-					     priority);
+		                              sched_get_priority_max(SCHED_FIFO)) / 2 +
+		                              priority);
 		pthread_attr_setschedparam(attr, &fifo_param);
 	}
 	if (pthread_attr_setscope(attr, PTHREAD_SCOPE_SYSTEM) != 0) {
 #ifdef PTHREAD_SCOPE_BOUND_NP
-	    // If system scope is not available (eg. we're not running
-	    // with CAP_SCHED_MGT capability on an SGI box), try bound
-	    // scope.  It exposes pthread scheduling to the kernel,
-	    // without setting realtime priority.
-	    pthread_attr_setscope(attr, PTHREAD_SCOPE_BOUND_NP);
+		// If system scope is not available (eg. we're not running
+		// with CAP_SCHED_MGT capability on an SGI box), try bound
+		// scope.  It exposes pthread scheduling to the kernel,
+		// without setting realtime priority.
+		pthread_attr_setscope(attr, PTHREAD_SCOPE_BOUND_NP);
 #endif
 	}
 #endif
@@ -1133,26 +1133,26 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 
 struct B2_mutex {
 	B2_mutex() { 
-	    pthread_mutexattr_t attr;
-	    pthread_mutexattr_init(&attr);
-	    // Initialize the mutex for priority inheritance --
-	    // required for accurate timing.
+		pthread_mutexattr_t attr;
+		pthread_mutexattr_init(&attr);
+		// Initialize the mutex for priority inheritance --
+		// required for accurate timing.
 #if defined(HAVE_PTHREAD_MUTEXATTR_SETPROTOCOL) && !defined(__CYGWIN__)
-	    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+		pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
 #endif
 #if defined(HAVE_PTHREAD_MUTEXATTR_SETTYPE) && defined(PTHREAD_MUTEX_NORMAL)
-	    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
 #ifdef HAVE_PTHREAD_MUTEXATTR_SETPSHARED
-	    pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE);
+		pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE);
 #endif
-	    pthread_mutex_init(&m, &attr);
-	    pthread_mutexattr_destroy(&attr);
+		pthread_mutex_init(&m, &attr);
+		pthread_mutexattr_destroy(&attr);
 	}
 	~B2_mutex() { 
-	    pthread_mutex_trylock(&m); // Make sure it's locked before
-	    pthread_mutex_unlock(&m);  // unlocking it.
-	    pthread_mutex_destroy(&m);
+		pthread_mutex_trylock(&m); // Make sure it's locked before
+		pthread_mutex_unlock(&m);  // unlocking it.
+		pthread_mutex_destroy(&m);
 	}
 	pthread_mutex_t m;
 };
@@ -1651,7 +1651,7 @@ ill:		printf("SIGILL num %d, code %d\n", sig, code);
 #ifdef ENABLE_GTK
 static GCallback dl_destroyed(GtkWidget *dialog)
 {
-    gtk_widget_destroy(dialog);
+	gtk_widget_destroy(dialog);
 	gtk_main_quit();
 	return NULL;
 }
