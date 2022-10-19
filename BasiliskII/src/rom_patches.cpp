@@ -736,24 +736,20 @@ void InstallDrivers(uint32 pb)
 	r.a[0] = pb;
 	Execute68kTrap(0xa000, &r);		// Open()
 
-	// Install CD-ROM driver unless nocdrom option given
-	if (!PrefsFindBool("nocdrom")) {
+	// Always install CD-ROM driver (so that we can mount virtual drives)
+	r.a[0] = ROMBaseMac + sony_offset + 0x200;
+	r.d[0] = (uint32)CDROMRefNum;
+	Execute68kTrap(0xa43d, &r);		// DrvrInstallRsrvMem()
+	r.a[0] = ReadMacInt32(ReadMacInt32(0x11c) + ~CDROMRefNum * 4);	// Get driver handle from Unit Table
+	Execute68kTrap(0xa029, &r);		// HLock()
+	dce = ReadMacInt32(r.a[0]);
+	WriteMacInt32(dce + dCtlDriver, ROMBaseMac + sony_offset + 0x200);
+	WriteMacInt16(dce + dCtlFlags, CDROMDriverFlags);
 
-		// Install CD-ROM driver
-		r.a[0] = ROMBaseMac + sony_offset + 0x200;
-		r.d[0] = (uint32)CDROMRefNum;
-		Execute68kTrap(0xa43d, &r);		// DrvrInstallRsrvMem()
-		r.a[0] = ReadMacInt32(ReadMacInt32(0x11c) + ~CDROMRefNum * 4);	// Get driver handle from Unit Table
-		Execute68kTrap(0xa029, &r);		// HLock()
-		dce = ReadMacInt32(r.a[0]);
-		WriteMacInt32(dce + dCtlDriver, ROMBaseMac + sony_offset + 0x200);
-		WriteMacInt16(dce + dCtlFlags, CDROMDriverFlags);
-
-		// Open CD-ROM driver
-		WriteMacInt32(pb + ioNamePtr, ROMBaseMac + sony_offset + 0x212);
-		r.a[0] = pb;
-		Execute68kTrap(0xa000, &r);		// Open()
-	}
+	// Open CD-ROM driver
+	WriteMacInt32(pb + ioNamePtr, ROMBaseMac + sony_offset + 0x212);
+	r.a[0] = pb;
+	Execute68kTrap(0xa000, &r);		// Open()
 }
 
 

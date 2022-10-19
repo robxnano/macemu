@@ -302,7 +302,10 @@ static bool position2msf(const cdrom_drive_info &info, uint16 postype, uint32 po
 
 void CDROMInit(void)
 {
-	SysAddCDROMPrefs();
+	// Add real CD-ROM drives
+	if (!PrefsFindBool("nocdrom")) {
+		SysAddCDROMPrefs();
+	}
 	
 	// Add drives specified in preferences
 	int index = 0;

@@ -152,6 +152,7 @@ static uint8 last_xpram[XPRAM_SIZE];				// Buffer for monitoring XPRAM changes
 #if !EMULATED_68K
 static pthread_t emul_thread;						// Handle of MacOS emulation thread (main thread)
 #endif
+static int use_gui = -1;   							// Override prefs and show gui
 
 static bool xpram_thread_active = false;			// Flag: XPRAM watchdog installed
 static volatile bool xpram_thread_cancel = false;	// Flag: Cancel XPRAM thread
@@ -411,8 +412,32 @@ static void usage(const char *prg_name)
 	exit(0);
 }
 
+#ifdef ENABLE_GTK
+GtkWindow *win;
+
+static void gui_startup (void)
+{
+	if (!PrefsEditor())
+		QuitEmulator();
+}
+#ifdef ENABLE_GTK3
+static void gui_activate (GtkApplication *app)
+{
+	g_assert (GTK_IS_APPLICATION (app));
+	win = gtk_application_get_active_window (app);
+	/* Ask the window manager/compositor to present the window. */
+	if (win != NULL)
+		gtk_window_present (win);
+}
+#endif
+#endif
+
 int main(int argc, char **argv)
 {
+#ifdef ENABLE_GTK3
+	GtkApplication *app = NULL;
+	int ret;
+#endif
 #if defined(ENABLE_GTK) && !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 	XInitThreads();
 #endif
@@ -475,6 +500,21 @@ int main(int argc, char **argv)
 				printf("switch address not defined\n");
 				usage(argv[0]);
 			}
+		// We intercept the --nogui commandline so that the settings
+		// window can change the setting from the prefs file
+		} else if (strcmp(argv[i], "--nogui") == 0) {
+			argv[i++] = NULL;
+			if (i < argc) {
+				if (strcmp(argv[i], "true") == 0)
+				    use_gui = false;
+				else
+				    use_gui = true;
+				argv[i] = NULL;
+			}
+		// Alternative commands to enter the GUI
+		} else if (strcmp(argv[i], "--gui") == 0 || strcmp(argv[i], "--settings") == 0) {
+				use_gui = true;
+				argv[i] = NULL;
 			vde_sock = argv[i];
 			argv[i] = NULL;
 		}
@@ -515,16 +555,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifdef ENABLE_GTK
-	if (!gui_connection) {
-		// Init GTK
-		gtk_set_locale();
-		gtk_init(&argc, &argv);
-	}
-#endif
-
 	// Read preferences
 	PrefsInit(vmdir, argc, argv);
+	// Only use nogui preference if not passed as command line argument
+	if (use_gui == -1)
+	    use_gui = !PrefsFindBool("nogui");
 
 	// Any command line arguments left?
 	for (int i=1; i<argc; i++) {
@@ -583,10 +618,24 @@ int main(int argc, char **argv)
 	// Init system routines
 	SysInit();
 
-	// Show preferences editor
-	if (!gui_connection && !PrefsFindBool("nogui"))
-		if (!PrefsEditor())
-			QuitEmulator();
+#ifdef ENABLE_GTK3
+	if (!gui_connection) {
+		// Init GTK
+		app = gtk_application_new (GetString(STR_APP_ID), G_APPLICATION_FLAGS_NONE);
+		g_set_prgname (GetString(STR_APP_DISPLAY_NAME));
+		g_signal_connect (app, "activate", G_CALLBACK (gui_activate), NULL);
+		g_signal_connect (app, "startup", G_CALLBACK (gui_startup), NULL);
+		g_application_register (G_APPLICATION (app), NULL, NULL);
+		ret = g_application_run (G_APPLICATION (app), argc, argv);
+	}
+#elif defined(ENABLE_GTK)
+	if (!gui_connection) {
+		// Init GTK
+		gtk_set_locale();
+		gtk_init(&argc, &argv);
+		gui_startup();
+	}
+#endif
 
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
@@ -630,17 +679,16 @@ int main(int argc, char **argv)
 #else
 	const bool can_map_all_memory = false;
 #endif
-	
 	// Try to allocate all memory from 0x0000, if it is not known to crash
 	if (can_map_all_memory && (vm_acquire_mac_fixed(0, RAMSize + 0x100000) == 0)) {
-		D(bug("Could allocate RAM and ROM from 0x0000\n"));
+		D(bug("Successfully allocated RAM and ROM from 0x0000\n"));
 		memory_mapped_from_zero = true;
 	}
 	
 #ifndef PAGEZERO_HACK
 	// Otherwise, just create the Low Memory area (0x0000..0x2000)
 	else if (vm_acquire_mac_fixed(0, 0x2000) == 0) {
-		D(bug("Could allocate the Low Memory globals\n"));
+		D(bug("Successfully allocated Low Memory Globals\n"));
 		lm_area_mapped = true;
 	}
 	
@@ -655,7 +703,8 @@ int main(int argc, char **argv)
 
 	// Create areas for Mac RAM and ROM
 #if REAL_ADDRESSING
-	if (memory_mapped_from_zero) {
+	if (memory_mapped_from_zero)
+	{
 		RAMBaseHost = (uint8 *)0;
 		ROMBaseHost = RAMBaseHost + RAMSize;
 	}
@@ -682,6 +731,7 @@ int main(int argc, char **argv)
 #endif
 
 #if DIRECT_ADDRESSING
+	printf("Direct addressing mode\n");
 	// RAMBaseMac shall always be zero
 	MEMBaseDiff = (uintptr)RAMBaseHost;
 	RAMBaseMac = 0;
@@ -1599,40 +1649,26 @@ ill:		printf("SIGILL num %d, code %d\n", sig, code);
  */
 
 #ifdef ENABLE_GTK
-static void dl_destroyed(void)
+static GCallback dl_destroyed(GtkWidget *dialog)
 {
+    gtk_widget_destroy(dialog);
 	gtk_main_quit();
-}
-
-static void dl_quit(GtkWidget *dialog)
-{
-	gtk_widget_destroy(dialog);
+	return NULL;
 }
 
 void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 {
-	char str[256];
-	sprintf(str, GetString(prefix_id), text);
-
-	GtkWidget *dialog = gtk_dialog_new();
-	gtk_window_set_title(GTK_WINDOW(dialog), GetString(title_id));
-	gtk_container_border_width(GTK_CONTAINER(dialog), 5);
-	gtk_widget_set_uposition(GTK_WIDGET(dialog), 100, 150);
-	gtk_signal_connect(GTK_OBJECT(dialog), "destroy", GTK_SIGNAL_FUNC(dl_destroyed), NULL);
-
-	GtkWidget *label = gtk_label_new(str);
-	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), label, TRUE, TRUE, 0);
-
-	GtkWidget *button = gtk_button_new_with_label(GetString(button_id));
-	gtk_widget_show(button);
-	gtk_signal_connect_object(GTK_OBJECT(button), "clicked", GTK_SIGNAL_FUNC(dl_quit), GTK_OBJECT(dialog));
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->action_area), button, FALSE, FALSE, 0);
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
-	gtk_widget_grab_default(button);
+	GtkWidget *dialog = gtk_message_dialog_new(NULL,
+	                                           GTK_DIALOG_MODAL,
+	                                           GTK_MESSAGE_WARNING,
+	                                           GTK_BUTTONS_NONE,
+	                                           GetString(title_id), NULL);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
+	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
+	g_signal_connect(dialog, "response", G_CALLBACK(dl_destroyed), NULL);
 	gtk_widget_show(dialog);
-
 	gtk_main();
+	return;
 }
 #endif
 
@@ -1648,11 +1684,13 @@ void ErrorAlert(const char *text)
 			rpc_method_wait_for_reply(gui_connection, RPC_TYPE_INVALID) == RPC_ERROR_NO_ERROR)
 			return;
 	}
-#if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
-	if (PrefsFindBool("nogui") || x_display == NULL) {
+#ifdef ENABLE_GTK
+#ifndef USE_SDL_VIDEO
+	if (x_display == NULL) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
+#endif
 	VideoQuitFullScreen();
 	display_alert(STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
 #else
@@ -1672,11 +1710,14 @@ void WarningAlert(const char *text)
 			rpc_method_wait_for_reply(gui_connection, RPC_TYPE_INVALID) == RPC_ERROR_NO_ERROR)
 			return;
 	}
-#if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
-	if (PrefsFindBool("nogui") || x_display == NULL) {
+#ifdef ENABLE_GTK
+#ifndef USE_SDL_VIDEO
+	if (x_display == NULL) {
 		printf(GetString(STR_SHELL_WARNING_PREFIX), text);
 		return;
 	}
+#endif
+	VideoQuitFullScreen();
 	display_alert(STR_WARNING_ALERT_TITLE, STR_GUI_WARNING_PREFIX, STR_OK_BUTTON, text);
 #else
 	printf(GetString(STR_SHELL_WARNING_PREFIX), text);

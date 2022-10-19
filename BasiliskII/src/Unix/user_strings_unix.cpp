@@ -25,11 +25,20 @@
 // Platform-specific string definitions
 user_string_def platform_strings[] = {
 	// Common strings that have a platform-specific variant
+	{STR_EXTFS_CTRL, "Shared Folder"},
+#ifdef __linux__
+	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Linux. Basilisk II will try to unmount it."},
+	{STR_EXTFS_NAME, "Linux Directory Tree"},
+	{STR_EXTFS_VOLUME_NAME, "Linux"},
+#elif __MACOSX__
+	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under macOS. Basilisk II will try to unmount it."},
+	{STR_EXTFS_NAME, "macOS Directory Tree"},
+	{STR_EXTFS_VOLUME_NAME, "macOS"},
+#else
 	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Unix. Basilisk II will try to unmount it."},
-	{STR_EXTFS_CTRL, "Unix Root"},
 	{STR_EXTFS_NAME, "Unix Directory Tree"},
 	{STR_EXTFS_VOLUME_NAME, "Unix"},
-
+#endif
 	// Purely platform-specific strings
 	{STR_NO_XSERVER_ERR, "Cannot connect to X server '%s'."},
 	{STR_NO_XVISUAL_ERR, "Cannot obtain appropriate X visual."},
@@ -62,7 +71,7 @@ user_string_def platform_strings[] = {
 
 	{STR_PREFS_MENU_FILE_GTK, "/_File"},
 	{STR_PREFS_ITEM_START_GTK, "/File/_Start Basilisk II"},
-	{STR_PREFS_ITEM_SAVE_GTK, "/File/Save _Preferences"},
+	{STR_PREFS_ITEM_SAVE_GTK, "/File/Sa_ve Settings"},
 	{STR_PREFS_ITEM_ZAP_PRAM_GTK, "/File/_Zap PRAM File"},
 	{STR_PREFS_ITEM_SEPL_GTK, "/File/sepl"},
 	{STR_PREFS_ITEM_QUIT_GTK, "/File/_Quit Basilisk II"},
@@ -88,6 +97,24 @@ user_string_def platform_strings[] = {
 	{STR_IGNORESEGV_CTRL, "Ignore Illegal Memory Accesses"},
 
 	{STR_NO_B2_EXE_FOUND, "Could not start %s (%s)."},
+	{STR_ABOUT_LICENSE, "Basilisk II is free software; you can redistribute it and/or modify \
+it under the terms of the GNU General Public License as published by \
+the Free Software Foundation; either version 2 of the License, or \
+(at your option) any later version.\n\n\
+Basilisk II is distributed in the hope that it will be useful, \
+but WITHOUT ANY WARRANTY; without even the implied warranty of \
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the \
+GNU General Public License for more details.\n\n\
+You should have received a copy of the GNU General Public License \
+along with this program; if not, write to the Free Software \
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA"},
+	{STR_ABOUT_COMMENTS, "Open source 68k Mac emulator"},
+	{STR_ABOUT_WEBSITE, "http://basiliskii.cebix.net"},
+	{STR_ABOUT_WEBSITE_LABEL, "Website"},
+
+	{STR_ELEVATE_DIALOG_TITLE, "Change security settings?"},
+	{STR_ELEVATE_DIALOG_TEXT, "Basilisk II needs to change security settings in order to run.\n\
+You will be asked for superuser permissions."},
 
 	{STR_ABOUT_COPYRIGHT, "© 1997-2008 Christian Bauer et al."},
 	{STR_ABOUT_LICENSE, "This program is free software; you can redistribute it and/or modify \
