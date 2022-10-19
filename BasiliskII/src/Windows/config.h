@@ -211,9 +211,6 @@
 /* The size of `void *', as computed by sizeof. */
 #define SIZEOF_VOID_P 4
 
-/* Define to 1 if you have the ANSI C header files. */
-#define STDC_HEADERS 1
-
 /* Define to enble SDL support */
 #define USE_SDL 1
 

@@ -1,11 +1,17 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl Written in 2002 by Christian Bauer et al.
 
-AC_INIT([Basilisk II], 1.0, [Christian.Bauer@uni-mainz.de], BasiliskII)
+AC_INIT([Basilisk II],[1.0],[Christian.Bauer@uni-mainz.de],[BasiliskII])
 AC_CONFIG_SRCDIR(main_unix.cpp)
-AC_PREREQ(2.52)
-AC_CONFIG_HEADER(config.h)
+AC_PREREQ([2.61])
+AC_CONFIG_HEADERS(config.h)
 
+m4_version_prereq(2.64, [
+  AX_CHECK_GNU_MAKE([],[
+    AC_MSG_ERROR([You need to install GNU Make to compile Basilisk II.])
+  ])],[
+  _cv_gnu_make_command=make
+])
 AC_USE_SYSTEM_EXTENSIONS
 
 dnl Aliases for PACKAGE and VERSION macros.
@@ -202,7 +208,7 @@ esac
 
 dnl Check if we should really be assuming x86_64 even if we detected HAVE_I386 above.
 if [[ "x$HAVE_I386" = "xyes" ]]; then
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     int main(void) {
         #if defined(__x86_64__)
                 return 0;
@@ -210,14 +216,14 @@ if [[ "x$HAVE_I386" = "xyes" ]]; then
                 return 1;
         #endif
     }
-  ], [
+  ]])],[
     HAVE_I386=no
     HAVE_X86_64=yes
-  ])
+  ],[],[])
 fi
 
 dnl Checks for programs.
-AC_PROG_CC_C99
+m4_version_prereq(2.70, [AC_PROG_CC], [AC_PROG_CC_C99])
 AC_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_CXX
@@ -255,8 +261,14 @@ AC_CHECK_LIB(rt, timer_create)
 AC_CHECK_LIB(rt, shm_open)
 AC_CHECK_LIB(m, cos)
 
+# Check for pkg-config macro, thanks to rdiez
+m4_ifndef([PKG_PROG_PKG_CONFIG], [m4_fatal(
+    [Macro PKG_PROG_PKG_CONFIG is not available. You need to install pkg-config.]
+)])
+PKG_PROG_PKG_CONFIG
+
 dnl AC_CHECK_SDLFRAMEWORK($1=NAME, $2=INCLUDES, $3=ACTION_IF_SUCCESSFUL, $4=ACTION_IF_UNSUCCESSFUL)
-dnl AC_TRY_LINK uses main() but SDL needs main to take args,
+dnl AC LINK IFELSE(AC LANG PROGRAM) uses main() but SDL needs main to take args,
 dnl therefore main is undefined with #undef.
 dnl Framework can be in an custom location.
 AC_DEFUN([AC_CHECK_SDLFRAMEWORK], [
@@ -270,12 +282,10 @@ AC_DEFUN([AC_CHECK_SDLFRAMEWORK], [
     fi
     saved_CPPFLAGS="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS -I$SDL_FRAMEWORK/$1.framework/Headers"
-    AC_TRY_LINK(
-      [$2
-#undef main], [],
-      [AS_VAR_SET(ac_Framework, yes); $3], [AS_VAR_SET(ac_Framework, no);
-LIBS="$saved_LIBS"; CPPFLAGS="$saved_CPPFLAGS"; $4]
-    )
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[$2
+#undef main]], [[]])],[AS_VAR_SET(ac_Framework, yes); $3],[AS_VAR_SET(ac_Framework, no);
+LIBS="$saved_LIBS"; CPPFLAGS="$saved_CPPFLAGS"; $4
+    ])
   ])
   AS_IF([test AS_VAR_GET(ac_Framework) = yes],
     [AC_DEFINE(AS_TR_CPP(HAVE_FRAMEWORK_$1), 1, [Define if framework $1 is available.])]
@@ -322,34 +332,43 @@ if [[ "x$WANT_SDL" = "xyes" ]]; then
     if [[ "x$TEMP_WANT_SDL_VERSION_MAJOR" = "x" ]]; then
       TEMP_WANT_SDL_VERSION_MAJOR=2
     fi
-
-    dnl use PKG_PROG_PKG_CONFIG to declare PKG_CONFIG variables.  Otherwise,
-    dnl PKG_* macros may fail, without much explanation.  The lack of this
-    dnl was causing --with-sdl1 to fail, as SDL 1.x could not be detected,
-    dnl as the 2nd call to PKG_CHECK_MODULES would fail, as $PKG_CONFIG
-    dnl never got defined (bizarrely-enough).  -- dludwig@pobox.com
-    PKG_PROG_PKG_CONFIG
-
     if [[ "x$TEMP_WANT_SDL_VERSION_MAJOR" = "x2" ]]; then
-      PKG_CHECK_MODULES([sdl2], [sdl2 >= 2.0], [
-        CFLAGS="$CFLAGS $sdl2_CFLAGS"
-        CXXFLAGS="$CXXFLAGS $sdl2_CFLAGS"
-        LIBS="$LIBS $sdl2_LIBS"
-        WANT_SDL_VERSION_MAJOR=2
-      ], [
-        TEMP_WANT_SDL_VERSION_MAJOR=1
-      ])
+      if [[ "$WANT_SDL_STATIC" = "yes" ]]; then
+        PKG_CHECK_MODULES_STATIC([SDL2], [sdl2 >= 2.0], [
+          WANT_SDL_VERSION_MAJOR=2
+        ], [
+          TEMP_WANT_SDL_VERSION_MAJOR=1
+        ])
+      else
+        PKG_CHECK_MODULES([SDL2], [sdl2 >= 2.0], [
+          WANT_SDL_VERSION_MAJOR=2
+        ], [
+          TEMP_WANT_SDL_VERSION_MAJOR=1
+        ])
+      fi
+      CFLAGS="$CFLAGS $SDL2_CFLAGS"
+      CXXFLAGS="$CXXFLAGS $SDL2_CFLAGS"
+      LIBS="$LIBS $SDL2_LIBS"
     fi
     if [[ "x$TEMP_WANT_SDL_VERSION_MAJOR" = "x1" ]]; then
-      PKG_CHECK_MODULES([sdl], [sdl >= 1.2], [
-        CFLAGS="$CFLAGS $sdl_CFLAGS"
-        CXXFLAGS="$CXXFLAGS $sdl_CFLAGS"
-        LIBS="$LIBS $sdl_LIBS"
-        WANT_SDL_VERSION_MAJOR=1
-      ], [
-        WANT_SDL=no
-        WANT_SDL_VERSION_MAJOR=
-      ])
+      if [[ "$WANT_SDL_STATIC" = "yes" ]]; then
+        PKG_CHECK_MODULES_STATIC([SDL], [sdl >= 1.2], [
+          WANT_SDL_VERSION_MAJOR=1
+        ], [
+          WANT_SDL=no
+          WANT_SDL_VERSION_MAJOR=
+        ])
+      else
+        PKG_CHECK_MODULES([SDL], [sdl >= 1.2], [
+          WANT_SDL_VERSION_MAJOR=1
+        ], [
+          WANT_SDL=no
+          WANT_SDL_VERSION_MAJOR=
+        ])
+      fi
+      CFLAGS="$CFLAGS $SDL_CFLAGS"
+      CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
+      LIBS="$LIBS $SDL_LIBS"
     fi
   fi
   SDL_SUPPORT=`echo "$SDL_SUPPORT" | sed -e "s/^ //"`
@@ -357,15 +376,14 @@ else
   SDL_SUPPORT="none"
 fi
 
-dnl We need X11, if not using SDL or Mac GUI.
-if [[ "x$WANT_SDL_VIDEO" = "xno" -a "x$WANT_MACOSX_GUI" = "xno" ]]; then
-  AC_PATH_XTRA
-  if [[ "x$no_x" = "xyes" ]]; then
-    AC_MSG_ERROR([You need X11 to run Basilisk II.])
-  fi
-  CFLAGS="$CFLAGS $X_CFLAGS"
-  CXXFLAGS="$CXXFLAGS $X_CFLAGS"
-  LIBS="$LIBS $X_PRE_LIBS $X_LIBS -lX11 -lXext $X_EXTRA_LIBS"
+dnl We need X11, if not using Mac GUI.
+if [[ "x$WANT_MACOSX_GUI" = "xno" ]]; then
+  PKG_CHECK_MODULES([X11], [x11 xext], [
+    CFLAGS="$CFLAGS $X11_CFLAGS"
+    CXXFLAGS="$CXXFLAGS $X11_CFLAGS"
+    LIBS="$LIBS $X11_LIBS"], [
+      AC_MSG_ERROR([You need X11 development libraries to compile Basilisk II.])
+  ])
 fi
 
 dnl BINCUE
@@ -435,7 +453,12 @@ if [[ "x$WANT_XF86_DGA" = "xyes" ]]; then
   ])
 fi
 if [[ "x$WANT_FBDEV_DGA" = "xyes" ]]; then
-  AC_DEFINE(ENABLE_FBDEV_DGA, 1, [Define if using DGA with framebuffer device.])
+  AC_CHECK_HEADER(linux/fb.h, [
+    AC_DEFINE(ENABLE_FBDEV_DGA, 1, [Define if using Linux fbdev extension.])
+  ], [
+    AC_MSG_WARN([Could not find Linux FBDev extension, ignoring --enable-fbdev-dga.])
+    WANT_FBDEV_DGA=no
+  ])
 fi
 
 dnl We use XFree86 VidMode if possible.
@@ -507,8 +530,8 @@ AC_SUBST(STANDALONE_GUI, [$WANT_STANDALONE_GUI])
 
 dnl We use ESD if possible.
 if [[ "x$WANT_ESD" = "xyes" ]]; then
-  AM_PATH_ESD(0.2.8, [
-    AC_DEFINE(ENABLE_ESD, 1, [Define is using ESD.])
+  PKG_CHECK_MODULES([ESD], [esound >= 0.2.8], [
+    AC_DEFINE(ENABLE_ESD, 1, [Define if using ESD.])
     CFLAGS="$CFLAGS $ESD_CFLAGS"
     CXXFLAGS="$CXXFLAGS $ESD_CFLAGS"
     LIBS="$LIBS $ESD_LIBS"
@@ -521,8 +544,6 @@ fi
 dnl We use 64-bit file size support if possible.
 AC_SYS_LARGEFILE
 
-dnl Checks for header files.
-AC_HEADER_STDC
 AC_CHECK_HEADERS(stdlib.h stdint.h)
 AC_CHECK_HEADERS(unistd.h fcntl.h sys/types.h sys/time.h sys/mman.h mach/mach.h)
 AC_CHECK_HEADERS(readline.h history.h readline/readline.h readline/history.h)
@@ -554,25 +575,20 @@ AC_CHECK_SIZEOF(double, 8)
 AC_CHECK_SIZEOF(long double, 12)
 AC_CHECK_SIZEOF(void *, 4)
 AC_TYPE_OFF_T
-AC_CHECK_TYPES(loff_t)
-AC_CHECK_TYPES(caddr_t)
+AC_CHECK_TYPE(loff_t)
+AC_CHECK_TYPE(caddr_t)
 AC_TYPE_SIZE_T
-AC_TYPE_SIGNAL
-AC_HEADER_TIME
+
 AC_STRUCT_TM
 
 dnl Check whether sys/socket.h defines type socklen_t.
 dnl (extracted from ac-archive/Miscellaneous)
 AC_CACHE_CHECK([for socklen_t],
   ac_cv_type_socklen_t, [
-  AC_TRY_COMPILE([
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
     #include <sys/types.h>
     #include <sys/socket.h>
-  ], [socklen_t len = 42; return 0;],
-  ac_cv_type_socklen_t=yes, ac_cv_type_socklen_t=no,
-  dnl When cross-compiling, do not assume anything.
-  ac_cv_type_socklen_t="$BII_CROSS_SOCKLEN_T"
-  )
+  ]], [[socklen_t len = 42; return 0;]])],[ac_cv_type_socklen_t=yes],[ac_cv_type_socklen_t=no])
 ])
 if [[ "x$ac_cv_type_socklen_t" != "xyes" ]]; then
   AC_DEFINE(socklen_t, int, [Define to 'int' if <sys/types.h> doesn't define.])
@@ -684,8 +700,8 @@ dnl Check whether compiler supports byte bit-fields
 AC_CACHE_CHECK([whether compiler supports byte bit-fields],
   ac_cv_have_byte_bitfields, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     struct A {
       unsigned char b1:4;
       unsigned char b2:4;
@@ -697,16 +713,14 @@ AC_CACHE_CHECK([whether compiler supports byte bit-fields],
     int main(void) {
       A a;
       return ! (sizeof(A) == 8 && &a.c == ((unsigned char *)&a + 1));
-    }],
-    [ac_cv_have_byte_bitfields=yes],
-    [ac_cv_have_byte_bitfields=no],
+    }]])],[ac_cv_have_byte_bitfields=yes],[ac_cv_have_byte_bitfields=no],[
     dnl When cross-compiling, assume only GCC supports this
-    [if [[ "$GCC" = "yes" ]]; then
+    if [[ "$GCC" = "yes" ]]; then
       ac_cv_have_byte_bitfields="guessing yes"
     else
       ac_cv_have_byte_bitfields="$BII_CROSS_BYTE_BITFIELDS"
-    fi]
-    )
+    fi
+    ])
   AC_LANG_RESTORE
 ])
 
@@ -717,10 +731,8 @@ AC_DEFUN([AC_CHECK_FRAMEWORK], [
     ac_Framework, [
     saved_LIBS="$LIBS"
     LIBS="$LIBS -framework $1"
-    AC_TRY_LINK(
-      [$2], [],
-      [AS_VAR_SET(ac_Framework, yes)], [AS_VAR_SET(ac_Framework, no); LIBS="$saved_LIBS"]
-    )
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[$2]], [[]])],[AS_VAR_SET(ac_Framework, yes)],[AS_VAR_SET(ac_Framework, no); LIBS="$saved_LIBS"
+    ])
   ])
   AS_IF([test AS_VAR_GET(ac_Framework) = yes],
     [AC_DEFINE(AS_TR_CPP(HAVE_FRAMEWORK_$1), 1, [Define if framework $1 is available.])]
@@ -795,9 +807,9 @@ irix*)
   CFLAGS=`echo "$CFLAGS -IPA" | sed -e "s/-g//g"`
   AC_MSG_CHECKING(if "-IPA" works)
   dnl Do a test compile of an empty function
-  AC_TRY_COMPILE([#if defined __GNUC__
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if defined __GNUC__
                   # error GCC does not support IPA yet
-                  #endif],, [AC_MSG_RESULT(yes); HAVE_IPA=yes], AC_MSG_RESULT(no))
+                  #endif]], [[]])],[AC_MSG_RESULT(yes); HAVE_IPA=yes],[AC_MSG_RESULT(no)])
   CFLAGS="$ocflags"
   ;;
 darwin*)
@@ -900,9 +912,6 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
       EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
       ;;
     esac
-    if [[ "$WANT_GTK" != "no" ]]; then
-      LIBS="$LIBS -lX11"
-    fi
   fi
 elif [[ "x$WANT_MACOSX_GUI" != "xyes" ]]; then
   VIDEOSRCS="video_x.cpp"
@@ -957,7 +966,7 @@ AC_DEFUN([AC_TRANSLATE_DEFINE], [
 dnl Check that the host supports TUN/TAP devices
 AC_CACHE_CHECK([whether TUN/TAP is supported],
   ac_cv_tun_tap_support, [
-  AC_TRY_COMPILE([
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
     #ifdef HAVE_SYS_SOCKET_H
     #include <sys/socket.h>
     #endif
@@ -969,13 +978,12 @@ AC_CACHE_CHECK([whether TUN/TAP is supported],
     #include <net/if.h>
     #include <net/if_tun.h>
     #endif
-  ], [
+  ]], [[
     struct ifreq ifr;
     memset(&ifr, 0, sizeof(ifr));
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-  ],
-  ac_cv_tun_tap_support=yes, ac_cv_tun_tap_support=no
-  )
+  ]])],[ac_cv_tun_tap_support=yes],[ac_cv_tun_tap_support=no
+  ])
 ])
 AC_TRANSLATE_DEFINE(ENABLE_TUNTAP, "$ac_cv_tun_tap_support",
   [Define if your system supports TUN/TAP devices.])
@@ -995,30 +1003,29 @@ if [[ "x$have_mach_vm" = "xyes" ]]; then
 AC_CACHE_CHECK([whether vm_protect works],
   ac_cv_vm_protect_works, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
+  AC_LANG([C++])
   ac_cv_vm_protect_works=yes
   dnl First the tests that should segfault
   for test_def in NONE_READ NONE_WRITE READ_WRITE; do
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
       #define CONFIGURE_TEST_VM_MAP
       #define TEST_VM_PROT_$test_def
       #include "../CrossPlatform/vm_alloc.cpp"
-    ], ac_cv_vm_protect_works=no, rm -f core,
+    ]])],[ac_cv_vm_protect_works=no],[rm -f core],[
     dnl When cross-compiling, do not assume anything
     ac_cv_vm_protect_works="$BII_CROSS_VM_PROTECT"
-    )
+    ])
   done
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_PROT_RDWR_WRITE
     #include "../CrossPlatform/vm_alloc.cpp"
-  ], , ac_cv_vm_protect_works=no,
+  ]])],[],[ac_cv_vm_protect_works=no],[
   dnl When cross-compiling, do not assume anything
   ac_cv_vm_protect_works="$BII_CROSS_VM_PROTECT"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
 
 dnl Remove support for vm_allocate() if vm_protect() does not work
 if [[ "x$have_mach_vm" = "xyes" ]]; then
@@ -1051,68 +1058,67 @@ dnl Check if we have a working anonymous mmap()
 AC_CACHE_CHECK([whether mmap supports MAP_ANON],
   ac_cv_mmap_anon, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define HAVE_MMAP_ANON
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_MMAP_ANON
     #include "../CrossPlatform/vm_alloc.cpp"
-  ], ac_cv_mmap_anon=yes, ac_cv_mmap_anon=no,
+  ]])],[ac_cv_mmap_anon=yes],[ac_cv_mmap_anon=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_mmap_anon="$BII_CROSS_MMAP_ANON"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
+
 AC_TRANSLATE_DEFINE(HAVE_MMAP_ANON, "$ac_cv_mmap_anon",
   [Define if <sys/mman.h> defines MAP_ANON and mmap()'ing with MAP_ANON works.])
 
 AC_CACHE_CHECK([whether mmap supports MAP_ANONYMOUS],
   ac_cv_mmap_anonymous, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define HAVE_MMAP_ANONYMOUS
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_MMAP_ANON
     #include "../CrossPlatform/vm_alloc.cpp"
-  ], ac_cv_mmap_anonymous=yes, ac_cv_mmap_anonymous=no,
+  ]])],[ac_cv_mmap_anonymous=yes],[ac_cv_mmap_anonymous=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_mmap_anonymous="$BII_CROSS_MMAP_SUPPORTS_MAP_ANONYMOUS"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
+
 AC_TRANSLATE_DEFINE(HAVE_MMAP_ANONYMOUS, "$ac_cv_mmap_anonymous",
   [Define if <sys/mman.h> defines MAP_ANONYMOUS and mmap()'ing with MAP_ANONYMOUS works.])
 
 AC_CACHE_CHECK([whether mprotect works],
   ac_cv_mprotect_works, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
+  AC_LANG([C++])
   ac_cv_mprotect_works=yes
   dnl First the tests that should segfault
   for test_def in NONE_READ NONE_WRITE READ_WRITE; do
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
       #define CONFIGURE_TEST_VM_MAP
       #define TEST_VM_PROT_$test_def
       #include "../CrossPlatform/vm_alloc.cpp"
-    ], ac_cv_mprotect_works=no, rm -f core,
+    ]])],[ac_cv_mprotect_works=no],[rm -f core],[
     dnl When cross-compiling, do not assume anything
     ac_cv_mprotect_works="$BII_CROSS_MPROTECT_WORKS"
-    )
+    ])
   done
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_PROT_RDWR_WRITE
     #include "../CrossPlatform/vm_alloc.cpp"
-  ], , ac_cv_mprotect_works=no,
+  ]])],[],[ac_cv_mprotect_works=no],[
   dnl When cross-compiling, do not assume anything
   ac_cv_mprotect_works="$BII_CROSS_MPROTECT_WORKS"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
 
 dnl Remove support for mmap() if mprotect() does not work
 if [[ "x$have_mmap_vm" = "xyes" ]]; then
@@ -1161,8 +1167,8 @@ dnl Check signal handlers need to be reinstalled
 AC_CACHE_CHECK([whether signal handlers need to be reinstalled],
   ac_cv_signal_need_reinstall, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #include <stdlib.h>
     #ifdef HAVE_UNISTD_H
     #include <unistd.h>
@@ -1174,13 +1180,13 @@ AC_CACHE_CHECK([whether signal handlers need to be reinstalled],
       signal(SIGUSR1, sigusr1_handler); raise(SIGUSR1); raise(SIGUSR1);
       exit(handled_signal == 2);
     }
-  ], ac_cv_signal_need_reinstall=yes, ac_cv_signal_need_reinstall=no,
+  ]])],[ac_cv_signal_need_reinstall=yes],[ac_cv_signal_need_reinstall=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_signal_need_reinstall="$BII_CROSS_SIGNAL_NEED_REINSTALL"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
+
 AC_TRANSLATE_DEFINE(SIGNAL_NEED_REINSTALL, "$ac_cv_signal_need_reinstall",
   [Define if your system requires signals to be reinstalled.])
 
@@ -1188,8 +1194,8 @@ dnl Check if sigaction handlers need to be reinstalled
 AC_CACHE_CHECK([whether sigaction handlers need to be reinstalled],
   ac_cv_sigaction_need_reinstall, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #include <stdlib.h>
     #ifdef HAVE_UNISTD_H
     #include <unistd.h>
@@ -1208,13 +1214,13 @@ AC_CACHE_CHECK([whether sigaction handlers need to be reinstalled],
       mysignal(SIGUSR1, sigusr1_handler); raise(SIGUSR1); raise(SIGUSR1);
       exit(handled_signal == 2);
     }
-  ], ac_cv_sigaction_need_reinstall=yes, ac_cv_sigaction_need_reinstall=no,
+  ]])],[ac_cv_sigaction_need_reinstall=yes],[ac_cv_sigaction_need_reinstall=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_sigaction_need_reinstall="$BII_CROSS_SIGACTION_NEED_REINSTALL"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
+
 AC_TRANSLATE_DEFINE(SIGACTION_NEED_REINSTALL, "$ac_cv_sigaction_need_reinstall",
   [Define if your system requires sigactions to be reinstalled.])
 
@@ -1222,8 +1228,8 @@ dnl Check if Mach exceptions supported.
 AC_CACHE_CHECK([whether your system supports Mach exceptions],
   ac_cv_have_mach_exceptions, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define HAVE_UNISTD_H 1
     #define HAVE_MACH_VM 1
     #define HAVE_MACH_TASK_SELF 1
@@ -1231,16 +1237,14 @@ AC_CACHE_CHECK([whether your system supports Mach exceptions],
     #define CONFIGURE_TEST_SIGSEGV_RECOVERY
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
-  ], [
+  ]])],[
   ac_cv_have_mach_exceptions=yes
-  ],
-  ac_cv_have_mach_exceptions=no,
+  ],[ac_cv_have_mach_exceptions=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_have_mach_exceptions="$BII_CROSS_HAVE_MACH_EXCEPTIONS"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
 
 case $target_os:$target_cpu in
 darwin*:arm) ac_cv_have_mach_exceptions=yes;;
@@ -1253,22 +1257,21 @@ dnl Check if Windows exceptions are supported.
 AC_CACHE_CHECK([whether your system supports Windows exceptions],
   ac_cv_have_win32_exceptions, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define HAVE_WIN32_EXCEPTIONS 1
     #define CONFIGURE_TEST_SIGSEGV_RECOVERY
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
-  ], [
+  ]])],[
   ac_cv_have_win32_exceptions=yes
-  ],
-  ac_cv_have_win32_exceptions=no,
+  ],[ac_cv_have_win32_exceptions=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_have_win32_exceptions="$BII_CROSS_HAVE_WIN32_EXCEPTIONS"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
+
 AC_TRANSLATE_DEFINE(HAVE_WIN32_EXCEPTIONS, "$ac_cv_have_win32_exceptions",
   [Define if your system supports Windows exceptions.])
 
@@ -1277,8 +1280,8 @@ if [[ -z "$sigsegv_recovery" ]]; then
   AC_CACHE_CHECK([whether your system supports extended signal handlers via asm],
     ac_cv_have_asm_extended_signals, [
     AC_LANG_SAVE
-    AC_LANG_CPLUSPLUS
-    AC_TRY_RUN([
+    AC_LANG([C++])
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
       #ifdef HAVE_UNISTD_H
       #include <unistd.h>
       #endif
@@ -1287,16 +1290,14 @@ if [[ -z "$sigsegv_recovery" ]]; then
       #define CONFIGURE_TEST_SIGSEGV_RECOVERY
       #include "../CrossPlatform/vm_alloc.cpp"
       #include "../CrossPlatform/sigsegv.cpp"
-    ], [
+    ]])],[
     ac_cv_have_asm_extended_signals=yes
-    ],
-    ac_cv_have_asm_extended_signals=no,
+    ],[ac_cv_have_asm_extended_signals=no],[
     dnl When cross-compiling, do not assume anything.
     ac_cv_have_asm_extended_signals="$BII_CROSS_HAVE_ASM_EXTENDED_SIGNALS"
-    )
+    ])
     AC_LANG_RESTORE
-    ]
-  )
+  ])
   AC_TRANSLATE_DEFINE(HAVE_ASM_UCONTEXT, "$ac_cv_have_asm_extended_signals",
     [Define if your system has <asm/ucontext.h> header.])
   AC_TRANSLATE_DEFINE(HAVE_SIGINFO_T, "$ac_cv_have_asm_extended_signals",
@@ -1307,8 +1308,8 @@ if [[ -z "$sigsegv_recovery" ]]; then
   AC_CACHE_CHECK([whether your system supports extended signal handlers],
     ac_cv_have_extended_signals, [
     AC_LANG_SAVE
-    AC_LANG_CPLUSPLUS
-    AC_TRY_RUN([
+    AC_LANG([C++])
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
       #ifdef HAVE_UNISTD_H
       #include <unistd.h>
       #endif
@@ -1316,16 +1317,14 @@ if [[ -z "$sigsegv_recovery" ]]; then
       #define CONFIGURE_TEST_SIGSEGV_RECOVERY
       #include "../CrossPlatform/vm_alloc.cpp"
       #include "../CrossPlatform/sigsegv.cpp"
-    ], [
+    ]])],[
     ac_cv_have_extended_signals=yes
-    ],
-    ac_cv_have_extended_signals=no,
+    ],[ac_cv_have_extended_signals=no],[
     dnl When cross-compiling, do not assume anything.
     ac_cv_have_extended_signals="$BII_CROSS_HAVE_EXTENDED_SIGNALS"
-    )
+    ])
     AC_LANG_RESTORE
-    ]
-  )
+  ])
   AC_TRANSLATE_DEFINE(HAVE_SIGINFO_T, "$ac_cv_have_extended_signals",
     [Define if your system supports extended signals.])
 fi
@@ -1333,19 +1332,18 @@ fi
 AC_CACHE_CHECK([whether we then have a subterfuge for your system],
 ac_cv_have_sigcontext_hack, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define HAVE_SIGCONTEXT_SUBTERFUGE 1
     #define CONFIGURE_TEST_SIGSEGV_RECOVERY
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
-  ], [
+  ]])],[
   ac_cv_have_sigcontext_hack=yes
-  ],
-  ac_cv_have_sigcontext_hack=no,
+  ],[ac_cv_have_sigcontext_hack=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_have_sigcontext_hack="$BII_CROSS_HAVE_SIGCONTEXT_SUBTERFUGE"
-  )
+  ])
   AC_LANG_RESTORE
 ])
 AC_TRANSLATE_DEFINE(HAVE_SIGCONTEXT_SUBTERFUGE, "$ac_cv_have_sigcontext_hack",
@@ -1369,19 +1367,18 @@ dnl Check if we can ignore the fault (instruction skipping in SIGSEGV handler)
 AC_CACHE_CHECK([whether we can skip instruction in SIGSEGV handler],
   ac_cv_have_skip_instruction, [
   AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_RUN([
+  AC_LANG([C++])
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define HAVE_SIGSEGV_SKIP_INSTRUCTION 1
     #define CONFIGURE_TEST_SIGSEGV_RECOVERY
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
-  ], ac_cv_have_skip_instruction=yes, ac_cv_have_skip_instruction=no,
+  ]])],[ac_cv_have_skip_instruction=yes],[ac_cv_have_skip_instruction=no],[
   dnl When cross-compiling, do not assume anything.
   ac_cv_have_skip_instruction="$BII_CROSS_SIGSEGV_SKIP_INSTRUCTION"
-  )
+  ])
   AC_LANG_RESTORE
-  ]
-)
+])
 
 if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" ]]; then
   ac_cv_have_skip_instruction=yes
@@ -1411,16 +1408,13 @@ if [[ -n "$LINKER_SCRIPT_FLAGS" ]]; then
   AC_CACHE_CHECK([whether linker script is usable],
     ac_cv_linker_script_works, [
     AC_LANG_SAVE
-    AC_LANG_CPLUSPLUS
+    AC_LANG([C++])
     saved_LDFLAGS="$LDFLAGS"
     LDFLAGS="$LDFLAGS $LINKER_SCRIPT_FLAGS"
-    AC_TRY_RUN(
-      [int main() {if ((char *)&main < (char *)0x70000000) return 1;}],
-      [ac_cv_linker_script_works=yes],
-      [ac_cv_linker_script_works=no],
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[int main() {if ((char *)&main < (char *)0x70000000) return 1;}]])],[ac_cv_linker_script_works=yes],[ac_cv_linker_script_works=no],[
       dnl When cross-compiling, assume it works
-      [ac_cv_linker_script_works="guessing yes"]
-    )
+      ac_cv_linker_script_works="guessing yes"
+    ])
     AC_LANG_RESTORE
     if [[ "$ac_cv_linker_script_works" = "no" ]]; then
       LDFLAGS="$saved_LDFLAGS"
@@ -1555,8 +1549,8 @@ if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
   CXXFLAGS="$CXXFLAGS -fno-merge-constants"
   AC_CACHE_CHECK([whether GCC supports constants merging], ac_cv_gcc_constants_merging, [
     AC_LANG_SAVE
-    AC_LANG_CPLUSPLUS
-    AC_TRY_COMPILE([],[],[ac_cv_gcc_constants_merging=yes],[ac_cv_gcc_constants_merging=no])
+    AC_LANG([C++])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[ac_cv_gcc_constants_merging=yes],[ac_cv_gcc_constants_merging=no])
     AC_LANG_RESTORE
   ])
   if [[ "x$ac_cv_gcc_constants_merging" != "xyes" ]]; then
@@ -1571,8 +1565,8 @@ if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
   CXXFLAGS="$CXXFLAGS -fno-gcse-sm"
   AC_CACHE_CHECK([whether GCC supports store motion], ac_cv_gcc_store_motion, [
     AC_LANG_SAVE
-    AC_LANG_CPLUSPLUS
-    AC_TRY_COMPILE([],[],[ac_cv_gcc_store_motion=yes],[ac_cv_gcc_store_motion=no])
+    AC_LANG([C++])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[ac_cv_gcc_store_motion=yes],[ac_cv_gcc_store_motion=no])
     AC_LANG_RESTORE
   ])
   if [[ "x$ac_cv_gcc_store_motion" != "xyes" ]]; then
@@ -1586,7 +1580,7 @@ if [[ "x$HAVE_GCC30" = "xyes" ]]; then
   CFLAGS="$CFLAGS -fno-strict-aliasing"
   AC_CACHE_CHECK([whether the compiler supports -fno-strict-aliasing],
     ac_cv_gcc_no_strict_aliasing, [
-    AC_TRY_COMPILE([],[],[ac_cv_gcc_no_strict_aliasing=yes],[ac_cv_gcc_no_strict_aliasing=no])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[ac_cv_gcc_no_strict_aliasing=yes],[ac_cv_gcc_no_strict_aliasing=no])
   ])
   if [[ "x$ac_cv_gcc_no_strict_aliasing" = "xyes" ]]; then
     AC_SUBST(SLIRP_CFLAGS, "-fno-strict-aliasing")
@@ -1600,7 +1594,7 @@ if [[ "x$HAVE_GCC30" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
   CFLAGS="$CFLAGS -mdynamic-no-pic"
   AC_CACHE_CHECK([whether the compiler supports -mdynamic-no-pic],
     ac_cv_gcc_mdynamic_no_pic, [
-    AC_TRY_COMPILE([],[],[ac_cv_gcc_mdynamic_no_pic=yes],[ac_cv_gcc_mdynamic_no_pic=no])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[ac_cv_gcc_mdynamic_no_pic=yes],[ac_cv_gcc_mdynamic_no_pic=no])
   ])
   if [[ "x$ac_cv_gcc_mdynamic_no_pic" = "xyes" ]]; then
     CXXFLAGS="$CXXFLAGS -mdynamic-no-pic"
@@ -1714,8 +1708,7 @@ dnl may be examined by the commands in the second argument.
 dnl
 AC_DEFUN([gcc_AC_EXAMINE_OBJECT],
 [AC_LANG_SAVE
-AC_LANG_C
-dnl Next bit cribbed from AC_TRY_COMPILE.
+AC_LANG([C])
 cat > conftest.$ac_ext <<EOF
 [#line __oline__ "configure"
 #include "confdefs.h"
@@ -1948,4 +1941,4 @@ echo Assembly optimizations ................. : $ASM_OPTIMIZATIONS
 echo Addressing mode ........................ : $ADDRESSING_MODE
 echo Bad memory access recovery type ........ : $sigsegv_recovery
 echo
-echo "Configuration done. Now type \"make\" (or \"gmake\")."
+echo "Configuration done. Now type \"$_cv_gnu_make_command\"."
