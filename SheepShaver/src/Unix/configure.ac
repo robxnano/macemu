@@ -137,6 +137,45 @@ dnl Checks for libraries.
 AC_CHECK_LIB(posix4, sem_init)
 AC_CHECK_LIB(m, cos)
 
+dnl We need pthreads on non-PowerPC systems. Try libpthread first, then libc_r (FreeBSD), then PTL.
+HAVE_PTHREADS=yes
+case $EMULATED_PPC:$target_os in
+no:linux*|no:netbsd*)
+  dnl We do have our own pthread_cancel() implementation
+  AC_DEFINE(HAVE_PTHREAD_CANCEL, 1, [Define if you have the pthread_cancel function.])
+  ;;
+*:*)
+  AC_SEARCH_LIBS([pthread_create], [pthread c_r PTL], [], [
+    HAVE_PTHREADS=no
+  ])
+  AC_CHECK_FUNCS(pthread_cancel)
+  AC_CHECK_FUNCS(pthread_cond_init pthread_testcancel)
+  AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
+  AC_CHECK_FUNCS(pthread_mutexattr_settype)
+  AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
+  dnl If POSIX.4 semaphores are not available, we emulate them with pthread mutexes.
+  SEMSRC=
+  AC_CHECK_FUNCS(sem_init, , [
+  if test "x$HAVE_PTHREADS" = "xyes"; then
+    SEMSRC=posix_sem.cpp
+  fi
+  ])
+  ;;
+esac
+if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
+  AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
+fi
+
+dnl We use FBDev DGA if possible.
+if [[ "x$WANT_FBDEV_DGA" = "xyes" ]]; then
+  AC_CHECK_HEADER(linux/fb.h, [
+    AC_DEFINE(ENABLE_FBDEV_DGA, 1, [Define if using Linux fbdev extension.])
+  ], [
+    AC_MSG_WARN([Could not find Linux FBDev extension, ignoring --enable-fbdev-dga.])
+    WANT_FBDEV_DGA=no
+  ])
+fi
+
 # Check for pkg-config macro, thanks to rdiez
 m4_ifndef([PKG_PROG_PKG_CONFIG], [m4_fatal(
     [Macro PKG_PROG_PKG_CONFIG is not available. You need to install pkg-config.]
@@ -260,52 +299,6 @@ PKG_CHECK_MODULES([X11], [x11 xext], [
     AC_MSG_ERROR([You need X11 development libraries to compile SheepShaver.])
 ])
 
-
-dnl We need pthreads on non-PowerPC systems. Try libpthread first, then libc_r (FreeBSD), then PTL.
-HAVE_PTHREADS=yes
-case $EMULATED_PPC:$target_os in
-no:linux*|no:netbsd*)
-  dnl We do have our own pthread_cancel() implementation
-  AC_DEFINE(HAVE_PTHREAD_CANCEL, 1, [Define if you have the pthread_cancel function.])
-  ;;
-*:*)
-  AC_CHECK_LIB(pthread, pthread_create, , [
-    AC_CHECK_LIB(c_r, pthread_create, , [
-      AC_CHECK_LIB(PTL, pthread_create, , [
-        dnl XXX remove when no pthreads case is merged
-        AC_MSG_ERROR([You need pthreads to run SheepShaver.])
-        HAVE_PTHREADS=no
-      ])
-    ])
-  ])
-  AC_CHECK_FUNCS(pthread_cancel)
-  AC_CHECK_FUNCS(pthread_cond_init pthread_testcancel)
-  AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
-  AC_CHECK_FUNCS(pthread_mutexattr_settype)
-  AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
-  dnl If POSIX.4 semaphores are not available, we emulate them with pthread mutexes.
-  SEMSRC=
-  AC_CHECK_FUNCS(sem_init, , [
-  if test "x$HAVE_PTHREADS" = "xyes"; then
-    SEMSRC=posix_sem.cpp
-  fi
-  ])
-  ;;
-esac
-if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
-  AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
-fi
-
-dnl We use FBDev DGA if possible.
-if [[ "x$WANT_FBDEV_DGA" = "xyes" ]]; then
-  AC_CHECK_HEADER(linux/fb.h, [
-    AC_DEFINE(ENABLE_FBDEV_DGA, 1, [Define if using Linux fbdev extension.])
-  ], [
-    AC_MSG_WARN([Could not find Linux FBDev extension, ignoring --enable-fbdev-dga.])
-    WANT_FBDEV_DGA=no
-  ])
-fi
-
 dnl We use XFree86 DGA if possible.
 if [[ "x$WANT_XF86_DGA" = "xyes" ]]; then
   AC_CHECK_LIB(Xxf86dga, XF86DGAQueryExtension, [
@@ -327,12 +320,6 @@ if [[ "x$WANT_XF86_VIDMODE" = "xyes" ]]; then
     WANT_XF86_VIDMODE=no
   ])
 fi
-
-# Check for pkg-config macro, thanks to rdiez
-m4_ifndef([PKG_PROG_PKG_CONFIG], [m4_fatal(
-    [The PKG_PROG_PKG_CONFIG macro is not available. You need to install pkg-config.]
-)])
-PKG_PROG_PKG_CONFIG
 
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
@@ -433,7 +420,7 @@ AC_CHECK_SIZEOF(float, 4)
 AC_CHECK_SIZEOF(double, 8)
 AC_CHECK_SIZEOF(void *, 4)
 AC_TYPE_OFF_T
-AC_CHECK_TYPE(loff_t)
+AC_CHECK_TYPES([loff_t])
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
 
@@ -966,24 +953,6 @@ AC_TRANSLATE_DEFINE(HAVE_MMAP_VM, $have_mmap_vm,
   [Define if your system has a working mmap()-based memory allocator.])
 
 fi dnl HAVE_MMAP_VM
-
-dnl Check if we can disable position-independent code
-AC_CACHE_CHECK([for flag to disable position-independent code],
-  ac_cv_no_pie, [
-  saved_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS -Wl,-no-pie"
-  AC_LINK_IFELSE([AC_LANG_PROGRAM()],[
-    ac_cv_no_pie="-no-pie"],[
-    LDFLAGS="$saved_LDFLAGS -Wl,-no_pie"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM()],[
-      ac_cv_no_pie="-no_pie"],[
-      ac_cv_no_pie="none"
-    ])
-  ])
-  if [[ "$ac_cv_no_pie" = "none" ]]; then
-    LDFLAGS="$saved_LDFLAGS"
-  fi
-])
 
 dnl Check if we can modify the __PAGEZERO segment for use as Low Memory
 AC_CACHE_CHECK([whether __PAGEZERO can be Low Memory area 0x0000-0x3000],

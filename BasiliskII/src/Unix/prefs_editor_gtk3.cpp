@@ -477,6 +477,14 @@ static void set_help_overlay (GtkApplicationWindow *win)
 #endif
 }
 
+static gboolean get_use_headerbar (void)
+{
+	gboolean use_headerbar = false;
+	GtkSettings *settings = gtk_settings_get_default();
+	g_object_get(settings, "gtk-dialogs-use-header", &use_headerbar, NULL);
+	return use_headerbar;
+}
+
 /*
  *  Show preferences editor
  *  Returns true when user clicked on "Start", false otherwise
@@ -491,9 +499,7 @@ bool PrefsEditor(void)
 		return false;
 	}
 	builder = gtk_builder_new_from_resource(G_RES_PATH"ui/prefs-editor.ui");
-	bool use_headerbar = false;
-	GtkSettings *settings = gtk_settings_get_default();
-	g_object_get(settings, "gtk-dialogs-use-header", &use_headerbar, NULL);
+	gboolean use_headerbar = get_use_headerbar();
 	set_file_menu(GTK_APPLICATION(app));
 
 	// Create window
@@ -682,7 +688,7 @@ static void cb_create_volume_response (GtkWidget *chooser, int response, GtkEntr
 							(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
 							GTK_MESSAGE_WARNING,
 							GTK_BUTTONS_CLOSE,
-							"Enter a valid size", NULL);
+							"Enter a valid size");
 			gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "The volume size should be between 1 and 2000.");
 			gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(chooser));
 			g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
@@ -1264,7 +1270,7 @@ void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 						GTK_DIALOG_MODAL,
 						GTK_MESSAGE_WARNING,
 						GTK_BUTTONS_NONE,
-						GetString(title_id), NULL);
+						GetString(title_id));
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
 	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
 	g_signal_connect(dialog, "response", G_CALLBACK(dl_destroyed), NULL);

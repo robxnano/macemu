@@ -566,7 +566,7 @@ static void cb_create_volume_response (GtkWidget *chooser, int response, GtkEntr
 							(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
 							GTK_MESSAGE_WARNING,
 							GTK_BUTTONS_CLOSE,
-							"Enter a valid size", NULL);
+							"Enter a valid size");
 			gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "The volume size should be between 1 and 2000.");
 			gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(chooser));
 			g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
@@ -1619,7 +1619,7 @@ void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 	                                           GTK_DIALOG_MODAL,
 	                                           GTK_MESSAGE_WARNING,
 	                                           GTK_BUTTONS_NONE,
-	                                           GetString(title_id), NULL);
+	                                           GetString(title_id));
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
 	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
 	g_signal_connect(dialog, "response", G_CALLBACK(dl_destroyed), NULL);
