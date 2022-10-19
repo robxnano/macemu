@@ -8,7 +8,7 @@
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
+ *  This program is distributd in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -98,7 +98,6 @@
 #include "main.h"
 #include "version.h"
 #include "prefs.h"
-#include "prefs_editor.h"
 #include "cpu_emulation.h"
 #include "emul_op.h"
 #include "xlowmem.h"
@@ -133,10 +132,12 @@
 
 #ifdef ENABLE_GTK
 #include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 #include <X11/Xlib.h>
 #endif
 #endif
+#include "prefs_editor.h"
 
 #ifdef ENABLE_XF86_DGA
 #include <X11/Xlib.h>
@@ -160,7 +161,6 @@
 
 // Interrupts in native mode?
 #define INTERRUPTS_IN_NATIVE_MODE 1
-
 
 // Constants
 const char ROM_FILE_NAME[] = "ROM";
@@ -227,6 +227,7 @@ static bool tick_thread_active = false;		// Flag: MacOS thread installed
 static volatile bool tick_thread_cancel;	// Flag: Cancel 60Hz thread
 static pthread_t tick_thread;				// 60Hz thread
 static pthread_t emul_thread;				// MacOS thread
+static int use_gui = -1;   					// Override prefs and show gui
 
 static bool ready_for_signals = false;		// Handler installed, signals can be sent
 
@@ -738,8 +739,32 @@ static bool init_sdl()
 }
 #endif
 
+#ifdef ENABLE_GTK
+GtkWindow *win;
+
+static void gui_startup (void)
+{
+	if (use_gui && !PrefsEditor())
+		QuitEmulator();
+}
+#ifdef ENABLE_GTK3
+static void gui_activate (GtkApplication *app)
+{
+	g_assert (GTK_IS_APPLICATION (app));
+	win = gtk_application_get_active_window (app);
+	/* Ask the window manager/compositor to present the window. */
+	if (win != NULL)
+		gtk_window_present (win);
+}
+#endif
+#endif
+
 int main(int argc, char **argv)
 {
+#ifdef ENABLE_GTK3
+	GtkApplication *app = NULL;
+	int ret;
+#endif
 #if defined(ENABLE_GTK) && !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 	XInitThreads();
 #endif
@@ -812,6 +837,21 @@ int main(int argc, char **argv)
 				UserPrefsPath = argv[i];
 				argv[i] = NULL;
 			}
+		// We intercept the --nogui commandline so that the settings
+		// window can change the setting from the prefs file
+		} else if (strcmp(argv[i], "--nogui") == 0) {
+			argv[i++] = NULL;
+			if (i < argc) {
+				if (strcmp(argv[i], "true") == 0)
+				    use_gui = false;
+				else
+				    use_gui = true;
+				argv[i] = NULL;
+			}
+		// Alternative commands to enter the GUI
+		} else if (strcmp(argv[i], "--gui") == 0 || strcmp(argv[i], "--settings") == 0) {
+				use_gui = true;
+				argv[i] = NULL;
 		} else if (valid_vmdir(argv[i])) {
 			vmdir = argv[i];
 			argv[i] = NULL;
@@ -846,16 +886,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifdef ENABLE_GTK
-	if (!gui_connection) {
-		// Init GTK
-		gtk_set_locale();
-		gtk_init(&argc, &argv);
-	}
-#endif
-
 	// Read preferences
 	PrefsInit(vmdir, argc, argv);
+	// Only use nogui preference if not passed as command line argument
+	if (use_gui == -1)
+	    use_gui = !PrefsFindBool("nogui");
 
 #ifdef __MACOSX__
 #if SDL_VERSION_ATLEAST(2,0,0)
@@ -912,10 +947,24 @@ int main(int argc, char **argv)
 	// Init system routines
 	SysInit();
 
-	// Show preferences editor
-	if (!PrefsFindBool("nogui"))
-		if (!PrefsEditor())
-			goto quit;
+#ifdef ENABLE_GTK3
+	if (!gui_connection) {
+		// Init GTK
+		app = gtk_application_new (GetString(STR_APP_ID), G_APPLICATION_FLAGS_NONE);
+		g_set_prgname (GetString(STR_APP_DISPLAY_NAME));
+		g_signal_connect (app, "activate", G_CALLBACK (gui_activate), NULL);
+		g_signal_connect (app, "startup", G_CALLBACK (gui_startup), NULL);
+		g_application_register (G_APPLICATION (app), NULL, NULL);
+		ret = g_application_run (G_APPLICATION (app), argc, argv);
+	}
+#elif defined(ENABLE_GTK)
+	if (!gui_connection) {
+	// Init GTK
+		gtk_set_locale();
+		gtk_init(&argc, &argv);
+		gui_startup();
+	}
+#endif
 
 #if !EMULATED_PPC
 	// Check some things
@@ -1528,16 +1577,16 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 		struct sched_param fifo_param;
 		fifo_param.sched_priority = ((sched_get_priority_min(SCHED_FIFO) + 
 					      sched_get_priority_max(SCHED_FIFO)) / 2 +
-					     priority);
+					      priority);
 		pthread_attr_setschedparam(attr, &fifo_param);
 	}
 	if (pthread_attr_setscope(attr, PTHREAD_SCOPE_SYSTEM) != 0) {
 #ifdef PTHREAD_SCOPE_BOUND_NP
-	    // If system scope is not available (eg. we're not running
-	    // with CAP_SCHED_MGT capability on an SGI box), try bound
-	    // scope.  It exposes pthread scheduling to the kernel,
-	    // without setting realtime priority.
-	    pthread_attr_setscope(attr, PTHREAD_SCOPE_BOUND_NP);
+		// If system scope is not available (eg. we're not running
+		// with CAP_SCHED_MGT capability on an SGI box), try bound
+		// scope.  It exposes pthread scheduling to the kernel,
+		// without setting realtime priority.
+		pthread_attr_setscope(attr, PTHREAD_SCOPE_BOUND_NP);
 #endif
 	}
 #endif
@@ -1553,26 +1602,26 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 
 struct B2_mutex {
 	B2_mutex() { 
-	    pthread_mutexattr_t attr;
-	    pthread_mutexattr_init(&attr);
-	    // Initialize the mutex for priority inheritance --
-	    // required for accurate timing.
+		pthread_mutexattr_t attr;
+		pthread_mutexattr_init(&attr);
+		// Initialize the mutex for priority inheritance --
+		// required for accurate timing.
 #if defined(HAVE_PTHREAD_MUTEXATTR_SETPROTOCOL) && !defined(__CYGWIN__)
-	    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+		pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
 #endif
 #if defined(HAVE_PTHREAD_MUTEXATTR_SETTYPE) && defined(PTHREAD_MUTEX_NORMAL)
-	    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
 #ifdef HAVE_PTHREAD_MUTEXATTR_SETPSHARED
-	    pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE);
+		pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_PRIVATE);
 #endif
-	    pthread_mutex_init(&m, &attr);
-	    pthread_mutexattr_destroy(&attr);
+		pthread_mutex_init(&m, &attr);
+		pthread_mutexattr_destroy(&attr);
 	}
 	~B2_mutex() { 
-	    pthread_mutex_trylock(&m); // Make sure it's locked before
-	    pthread_mutex_unlock(&m);  // unlocking it.
-	    pthread_mutex_destroy(&m);
+		pthread_mutex_trylock(&m); // Make sure it's locked before
+		pthread_mutex_unlock(&m);  // unlocking it.
+		pthread_mutex_destroy(&m);
 	}
 	pthread_mutex_t m;
 };
@@ -2001,7 +2050,7 @@ static void sigsegv_handler(int sig, siginfo_t *sip, void *scp)
 		}
 
 		// In GUI mode, show error alert
-		if (!PrefsFindBool("nogui")) {
+		if (use_gui) {
 			char str[256];
 			if (transfer_type == TYPE_LOAD || transfer_type == TYPE_STORE)
 				sprintf(str, GetString(STR_MEM_ACCESS_ERR), transfer_size == SIZE_BYTE ? "byte" : transfer_size == SIZE_HALFWORD ? "halfword" : "word", transfer_type == TYPE_LOAD ? GetString(STR_MEM_ACCESS_READ) : GetString(STR_MEM_ACCESS_WRITE), addr, r->pc(), r->gpr(24), r->gpr(1));
@@ -2180,7 +2229,7 @@ power_inst:		sprintf(str, GetString(STR_POWER_INSTRUCTION_ERR), r->pc(), r->gpr(
 		}
 
 		// In GUI mode, show error alert
-		if (!PrefsFindBool("nogui")) {
+		if (use_gui) {
 			sprintf(str, GetString(STR_UNKNOWN_SEGV_ERR), r->pc(), r->gpr(24), r->gpr(1), opcode);
 			ErrorAlert(str);
 			QuitEmulator();
@@ -2284,40 +2333,26 @@ void SheepMem::Exit(void)
  */
 
 #ifdef ENABLE_GTK
-static void dl_destroyed(void)
+static GCallback dl_destroyed(GtkWidget *dialog)
 {
+    gtk_widget_destroy(dialog);
 	gtk_main_quit();
-}
-
-static void dl_quit(GtkWidget *dialog)
-{
-	gtk_widget_destroy(dialog);
+	return NULL;
 }
 
 void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 {
-	char str[256];
-	sprintf(str, GetString(prefix_id), text);
-
-	GtkWidget *dialog = gtk_dialog_new();
-	gtk_window_set_title(GTK_WINDOW(dialog), GetString(title_id));
-	gtk_container_border_width(GTK_CONTAINER(dialog), 5);
-	gtk_widget_set_uposition(GTK_WIDGET(dialog), 100, 150);
-	gtk_signal_connect(GTK_OBJECT(dialog), "destroy", GTK_SIGNAL_FUNC(dl_destroyed), NULL);
-
-	GtkWidget *label = gtk_label_new(str);
-	gtk_widget_show(label);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), label, TRUE, TRUE, 0);
-
-	GtkWidget *button = gtk_button_new_with_label(GetString(button_id));
-	gtk_widget_show(button);
-	gtk_signal_connect_object(GTK_OBJECT(button), "clicked", GTK_SIGNAL_FUNC(dl_quit), GTK_OBJECT(dialog));
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->action_area), button, FALSE, FALSE, 0);
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
-	gtk_widget_grab_default(button);
+	GtkWidget *dialog = gtk_message_dialog_new(NULL,
+	                                           GTK_DIALOG_MODAL,
+	                                           GTK_MESSAGE_WARNING,
+	                                           GTK_BUTTONS_NONE,
+	                                           GetString(title_id), NULL);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
+	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
+	g_signal_connect(dialog, "response", G_CALLBACK(dl_destroyed), NULL);
 	gtk_widget_show(dialog);
-
 	gtk_main();
+	return;
 }
 #endif
 
@@ -2333,11 +2368,13 @@ void ErrorAlert(const char *text)
 			rpc_method_wait_for_reply(gui_connection, RPC_TYPE_INVALID) == RPC_ERROR_NO_ERROR)
 			return;
 	}
-#if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
-	if (PrefsFindBool("nogui") || x_display == NULL) {
+#ifdef ENABLE_GTK
+#ifndef USE_SDL_VIDEO
+	if (x_display == NULL) {
 		printf(GetString(STR_SHELL_ERROR_PREFIX), text);
 		return;
 	}
+#endif
 	VideoQuitFullScreen();
 	display_alert(STR_ERROR_ALERT_TITLE, STR_GUI_ERROR_PREFIX, STR_QUIT_BUTTON, text);
 #else
@@ -2357,11 +2394,14 @@ void WarningAlert(const char *text)
 			rpc_method_wait_for_reply(gui_connection, RPC_TYPE_INVALID) == RPC_ERROR_NO_ERROR)
 			return;
 	}
-#if defined(ENABLE_GTK) && !defined(USE_SDL_VIDEO)
-	if (PrefsFindBool("nogui") || x_display == NULL) {
+#ifdef ENABLE_GTK
+#ifndef USE_SDL_VIDEO
+	if (x_display == NULL) {
 		printf(GetString(STR_SHELL_WARNING_PREFIX), text);
 		return;
 	}
+#endif
+	VideoQuitFullScreen();
 	display_alert(STR_WARNING_ALERT_TITLE, STR_GUI_WARNING_PREFIX, STR_OK_BUTTON, text);
 #else
 	printf(GetString(STR_SHELL_WARNING_PREFIX), text);

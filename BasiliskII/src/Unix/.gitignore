@@ -21,5 +21,8 @@ cpuemu_nf.cpp
 cpustbl_nf.cpp
 cpufunctbl.cpp
 
+# Generated GLib resource files
+g_resource.cpp
+
 patches/*
 .pc*

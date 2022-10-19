@@ -185,9 +185,6 @@ void LoadPrefs(const char* vmdir)
 	}
 
 	// No prefs file, save defaults in $XDG_CONFIG_HOME directory
-#ifdef __linux__
-	PrefsAddString("cdrom", "/dev/cdrom");
-#endif
 	printf("No prefs file found, creating new one at %s\n", prefs_name.c_str());
 	SavePrefs();
 }

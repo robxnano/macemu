@@ -58,6 +58,12 @@ user_string_def common_strings[] = {
 	{STR_QUIT_BUTTON, "Quit"},
 	{STR_CANCEL_BUTTON, "Cancel"},
 	{STR_IGNORE_BUTTON, "Ignore"},
+	{STR_CONTINUE_BUTTON, "Continue"},
+	{STR_SELECT_BUTTON, "Select"},
+	{STR_CREATE_BUTTON, "Create"},
+	{STR_APP_NAME, "SheepShaver"},
+	{STR_APP_DISPLAY_NAME, "SheepShaver"},
+	{STR_APP_ID, "net.cebix.SheepShaver"},
 
 	{STR_NOT_ENOUGH_MEMORY_ERR, "Your computer does not have enough memory to run SheepShaver."},
 	{STR_NO_KERNEL_DATA_ERR, "Cannot create Kernel Data area: %s (%08x)."},
@@ -99,10 +105,10 @@ user_string_def common_strings[] = {
 	{STR_BOOTDRIVER_CTRL, "Boot From"},
 	{STR_BOOT_ANY_LAB, "Any"},
 	{STR_BOOT_CDROM_LAB, "CD-ROM"},
-	{STR_NOCDROM_CTRL, "Disable CD-ROM Driver"},
-	{STR_ADD_VOLUME_TITLE, "Add Volume"},
-	{STR_CREATE_VOLUME_TITLE, "Create Volume File"},
-	{STR_HARDFILE_SIZE_CTRL, "Size (MiB)"},
+	{STR_NOCDROM_CTRL, "Disable Physical CD-ROM Driver"},
+	{STR_ADD_VOLUME_TITLE, "Select Volume"},
+	{STR_CREATE_VOLUME_TITLE, "Create Volume"},
+	{STR_HARDFILE_SIZE_CTRL, "Size (MB)"},
 
 	{STR_GRAPHICS_SOUND_PANE_TITLE, "Graphics/Sound"},
 	{STR_FRAMESKIP_CTRL, "Window Refresh Rate"},
@@ -154,11 +160,11 @@ user_string_def common_strings[] = {
 	{STR_SERPORTB_CTRL, "Printer Port"},
 	{STR_NONET_CTRL, "Disable Ethernet"},
 	{STR_ETHERNET_IF_CTRL, "Ethernet Interface"},
+	{STR_UDPTUNNEL_CTRL, "Tunnel MacOS Networking over UDP"},
+	{STR_UDPPORT_CTRL, "UDP Port Number"},
 
 	{STR_MEMORY_MISC_PANE_TITLE, "Memory/Misc"},
 	{STR_RAMSIZE_CTRL, "MacOS RAM Size (MB)"},
-	{STR_RAMSIZE_4MB_LAB, "4"},
-	{STR_RAMSIZE_8MB_LAB, "8"},
 	{STR_RAMSIZE_16MB_LAB, "16"},
 	{STR_RAMSIZE_32MB_LAB, "32"},
 	{STR_RAMSIZE_64MB_LAB, "64"},
@@ -171,7 +177,7 @@ user_string_def common_strings[] = {
 	{STR_IGNORESEGV_CTRL, "Ignore Illegal Memory Accesses"},
 	{STR_IDLEWAIT_CTRL, "Don't Use CPU When Idle"},
 	{STR_ROM_FILE_CTRL, "ROM File"},
-	{STR_NOGUI_CTRL, "Don't show settings window on launch"},
+	{STR_NOGUI_CTRL, "Don't Show Settings Window on Launch"},
 	{STR_NOGUI_TIP, "Tip: You can access the settings by right-clicking on the launcher icon." },
 	{STR_NOGUI_TIP2, "Tip: You can access the settings with the command: SheepShaver --nogui false" },
 
@@ -203,6 +209,15 @@ user_string_def common_strings[] = {
 
 	{STR_EXTFS_NAME, "Host Directory Tree"},
 	{STR_EXTFS_VOLUME_NAME, "Host"},
+
+	{STR_SCSI_PANE_TITLE, "SCSI"},
+	{STR_SCSI_ID_0, "ID 0"},
+	{STR_SCSI_ID_1, "ID 1"},
+	{STR_SCSI_ID_2, "ID 2"},
+	{STR_SCSI_ID_3, "ID 3"},
+	{STR_SCSI_ID_4, "ID 4"},
+	{STR_SCSI_ID_5, "ID 5"},
+	{STR_SCSI_ID_6, "ID 6"},
 
 	{-1, NULL}	// End marker
 };

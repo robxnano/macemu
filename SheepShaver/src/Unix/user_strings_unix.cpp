@@ -25,11 +25,20 @@
 // Platform-specific string definitions
 user_string_def platform_strings[] = {
 	// Common strings that have a platform-specific variant
+	{STR_EXTFS_CTRL, "Shared Folder"},
+#ifdef __linux__
 	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Linux. Basilisk II will try to unmount it."},
-	{STR_EXTFS_CTRL, "Unix Root"},
+	{STR_EXTFS_NAME, "Linux Directory Tree"},
+	{STR_EXTFS_VOLUME_NAME, "Linux"},
+#elif defined(__MACOSX__)
+	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under macOS. Basilisk II will try to unmount it."},
+	{STR_EXTFS_NAME, "macOS Directory Tree"},
+	{STR_EXTFS_VOLUME_NAME, "macOS"},
+#else
+	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Unix. Basilisk II will try to unmount it."},
 	{STR_EXTFS_NAME, "Unix Directory Tree"},
 	{STR_EXTFS_VOLUME_NAME, "Unix"},
-
+#endif
 	// Purely platform-specific strings
 	{STR_NO_DEV_ZERO_ERR, "Cannot open /dev/zero: %s."},
 	{STR_LOW_MEM_MMAP_ERR, "Cannot map Low Memory Globals: %s."},
@@ -64,7 +73,7 @@ user_string_def platform_strings[] = {
 	{STR_KEYCODE_VENDOR_WARN, "Cannot find vendor '%s' in keycode translation file %s."},
 	{STR_PREFS_MENU_FILE_GTK, "/_File"},
 	{STR_PREFS_ITEM_START_GTK, "/File/_Start SheepShaver"},
-	{STR_PREFS_ITEM_SAVE_GTK, "/File/Save _Preferences"},
+	{STR_PREFS_ITEM_SAVE_GTK, "/File/Sa_ve Settings"},
 	{STR_PREFS_ITEM_ZAP_PRAM_GTK, "/File/_Zap PRAM File"},
 	{STR_PREFS_ITEM_SEPL_GTK, "/File/sepl"},
 	{STR_PREFS_ITEM_QUIT_GTK, "/File/_Quit SheepShaver"},
@@ -88,6 +97,24 @@ user_string_def platform_strings[] = {
 	{STR_OPEN_WINDOW_ERR, "Cannot open Mac window."},
 
 	{STR_NO_B2_EXE_FOUND, "Could not start %s (%s)."},
+	{STR_ABOUT_LICENSE, "SheepShaver is free software; you can redistribute it and/or modify \
+it under the terms of the GNU General Public License as published by \
+the Free Software Foundation; either version 2 of the License, or \
+(at your option) any later version.\n\n\
+SheepShaver is distributed in the hope that it will be useful, \
+but WITHOUT ANY WARRANTY; without even the implied warranty of \
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the \
+GNU General Public License for more details.\n\n\
+You should have received a copy of the GNU General Public License \
+along with this program; if not, write to the Free Software \
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA"},
+	{STR_ABOUT_COMMENTS, "Open source PowerPC Mac emulator"},
+	{STR_ABOUT_WEBSITE, "http://sheepshaver.cebix.net"},
+	{STR_ABOUT_WEBSITE_LABEL, "Website"},
+
+	{STR_ELEVATE_DIALOG_TITLE, "Change security settings?"},
+	{STR_ELEVATE_DIALOG_TEXT, "SheepShaver needs to change security settings in order to run.\n\
+You will be asked for superuser permissions."},
 
 	{STR_ABOUT_COPYRIGHT, "© 1997-2008 Christian Bauer and Marc Hellwig"},
 	{STR_ABOUT_LICENSE, "This program is free software; you can redistribute it and/or modify \
