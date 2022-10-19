@@ -843,9 +843,9 @@ int main(int argc, char **argv)
 			argv[i++] = NULL;
 			if (i < argc) {
 				if (strcmp(argv[i], "true") == 0)
-				    use_gui = false;
+					use_gui = false;
 				else
-				    use_gui = true;
+					use_gui = true;
 				argv[i] = NULL;
 			}
 		// Alternative commands to enter the GUI
@@ -890,7 +890,7 @@ int main(int argc, char **argv)
 	PrefsInit(vmdir, argc, argv);
 	// Only use nogui preference if not passed as command line argument
 	if (use_gui == -1)
-	    use_gui = !PrefsFindBool("nogui");
+		use_gui = !PrefsFindBool("nogui");
 
 #ifdef __MACOSX__
 #if SDL_VERSION_ATLEAST(2,0,0)
@@ -1576,8 +1576,8 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 		pthread_attr_setschedpolicy(attr, SCHED_FIFO);
 		struct sched_param fifo_param;
 		fifo_param.sched_priority = ((sched_get_priority_min(SCHED_FIFO) + 
-					      sched_get_priority_max(SCHED_FIFO)) / 2 +
-					      priority);
+		                              sched_get_priority_max(SCHED_FIFO)) / 2 +
+		                              priority);
 		pthread_attr_setschedparam(attr, &fifo_param);
 	}
 	if (pthread_attr_setscope(attr, PTHREAD_SCOPE_SYSTEM) != 0) {
@@ -2335,7 +2335,7 @@ void SheepMem::Exit(void)
 #ifdef ENABLE_GTK
 static GCallback dl_destroyed(GtkWidget *dialog)
 {
-    gtk_widget_destroy(dialog);
+	gtk_widget_destroy(dialog);
 	gtk_main_quit();
 	return NULL;
 }

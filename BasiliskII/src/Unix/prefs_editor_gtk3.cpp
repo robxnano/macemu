@@ -52,7 +52,7 @@ static bool start_clicked = false;	// Return value of PrefsEditor() function
 static int screen_width, screen_height; // Screen dimensions
 
 
-static GtkComboBox *screen_mode;
+static GtkToggleButton *screen_mode;
 static GtkComboBox *screen_x;
 static GtkComboBox *screen_y;
 
@@ -73,12 +73,12 @@ struct combo_desc {
 
 #ifdef SHEEPSHAVER
 #define VOLUME_SIZE_DEFAULT "256"
-#define G_RES_PATH "/net/cebix/SheepShaver/"
+#define G_RES_PATH "/net/cebix/SheepShaver/ui/"
 #define ABOUT_COPYRIGHT "© 1997-2008 Christian Bauer and Marc Hellwig"
 const char *authors[] = {"Christian Bauer", "Marc Hellwig", "Gwenolé Beauchesne", NULL};
 #else
 #define VOLUME_SIZE_DEFAULT "64"
-#define G_RES_PATH "/net/cebix/BasiliskII/"
+#define G_RES_PATH "/net/cebix/BasiliskII/ui/"
 #define ABOUT_COPYRIGHT "© 1997-2008 Christian Bauer et al."
 const char *authors[] = {
 	"Christian Bauer", "Orlando Bassotto", "Gwenolé Beauchesne", "Marc Chabanas", "Marc Hellwig",
@@ -125,7 +125,7 @@ const char *authors[] = {
 const gchar *sysinfo = ABOUT_MODE "\nBuilt with " ABOUT_VIDEO " and " ABOUT_AUDIO "\n" ABOUT_COPYRIGHT;
 const gchar *version = g_strdup_printf("%d.%d", VERSION_MAJOR, VERSION_MINOR);
 
-#if !GLIB_CHECK_VERSION(2,44,0)
+#if !GLIB_CHECK_VERSION(2,44,0) || !defined(g_autofree)
 #define g_auto
 #define g_autofree
 #define g_autoptr(X)	X*
@@ -137,20 +137,20 @@ const gchar *version = g_strdup_printf("%d.%d", VERSION_MAJOR, VERSION_MINOR);
 
 // The widgets from prefs-editor.ui that need their values set on launch
 const char *check_boxes[] = {
-	"udptunnel", "keycodes", "ignoresegv", "idlewait","jit", "jitfpu", "jitinline",
-	"jitlazyflush", "jit68k", "gfxaccel", "swap_opt_cmd", NULL };
+	"udptunnel", "keycodes", "ignoresegv", "idlewait", "jit", "jitfpu", "jitinline",
+	"jitlazyflush", "jit68k", "mousewheelmode", "gfxaccel", "swap_opt_cmd", NULL };
 const char *inv_check_boxes[] = { "nocdrom", "nosound", "nogui", NULL };
 const char *entries[] = {
 	"extfs", "dsp", "mixer", "keycodefile", "scsi0", "scsi1", "scsi2", "scsi3", "scsi4",
 	"scsi5", "scsi6", "rom", NULL };
 const char *spin_buttons[] = { "mousewheellines", "udpport", NULL };
-const char *id_combos[] = { "bootdriver", "frameskip", "mousewheelmode", "modelid", NULL };
+const char *id_combos[] = { "bootdriver", "frameskip", "modelid", NULL };
 const char *text_combos[] = { "ramsize", NULL };
 
 // Set initial widget states
 static void set_initial_prefs(void)
 {
-    const char **id = check_boxes;
+	const char **id = check_boxes;
 	while (*id)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, *id)),
@@ -158,7 +158,7 @@ static void set_initial_prefs(void)
 		id++;
 	}
 
-    id = inv_check_boxes;
+	id = inv_check_boxes;
 	while(*id)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, *id)),
@@ -167,7 +167,7 @@ static void set_initial_prefs(void)
 	}
 	cb_swap_opt_cmd(NULL);
 
-    id = entries;
+	id = entries;
 	while (*id)
 	{
 		if (PrefsFindString(*id) != NULL)
@@ -268,9 +268,9 @@ void cb_screen_mode(GtkWidget *widget)
 	if (int_y < 0) int_y = 0;
 
 #ifdef ENABLE_FBDEV_DGA
-	const char *str = gtk_combo_box_get_active(screen_mode) ? "fbdev/%d/%d" : "win/%d/%d";
+	const char *str = gtk_toggle_button_get_active(screen_mode) ? "fbdev/%d/%d" : "win/%d/%d";
 #else
-	const char *str = gtk_combo_box_get_active(screen_mode) ? "dga/%d/%d" : "win/%d/%d";
+	const char *str = gtk_toggle_button_get_active(screen_mode) ? "dga/%d/%d" : "win/%d/%d";
 #endif
 	g_autofree gchar *screen = g_strdup_printf(str, int_x, int_y);
 	PrefsReplaceString("screen", screen);
@@ -402,7 +402,8 @@ extern "C" void dl_quit(GtkWidget *dialog)
 // "About" selected
 static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	gtk_show_about_dialog(GTK_WINDOW(win), "version", version,
+	gtk_show_about_dialog(GTK_WINDOW(win),
+	                      "version", version,
 	                      "copyright", sysinfo,
 	                      "authors", authors,
 	                      "comments", GetString(STR_ABOUT_COMMENTS),
@@ -420,7 +421,7 @@ static void mn_help (GSimpleAction *action, GVariant *parameter, gpointer user_d
 #if GTK_CHECK_VERSION(3,22,0)
 	gtk_show_uri_on_window(GTK_WINDOW(win), "https://github.com/kanjitalk755/macemu", GDK_CURRENT_TIME, NULL);
 #else
-    gtk_show_uri(gdk_screen_get_default(), "https://github.com/kanjitalk755/macemu", GDK_CURRENT_TIME, NULL);
+	gtk_show_uri(gdk_screen_get_default(), "https://github.com/kanjitalk755/macemu", GDK_CURRENT_TIME, NULL);
 #endif
 }
 
@@ -460,7 +461,7 @@ static void bind_sensitivity(const char *source_name, const char *target_name, G
 
 static void set_file_menu(GtkApplication *app)
 {
-	GtkBuilder *menubuilder = gtk_builder_new_from_resource(G_RES_PATH "ui/menu.ui");
+	GtkBuilder *menubuilder = gtk_builder_new_from_resource(G_RES_PATH "menu.ui");
 	GtkMenuButton *menu_button = GTK_MENU_BUTTON(gtk_builder_get_object(builder, "menu-button"));
 	gtk_menu_button_set_menu_model(menu_button, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "app-menu")));
 	gtk_application_set_menubar(app, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu")));
@@ -470,19 +471,11 @@ static void set_file_menu(GtkApplication *app)
 static void set_help_overlay (GtkApplicationWindow *win)
 {
 #if GTK_CHECK_VERSION(3,20,0)
-	GtkBuilder *helpbuilder = gtk_builder_new_from_resource(G_RES_PATH "ui/help-overlay.ui");
+	GtkBuilder *helpbuilder = gtk_builder_new_from_resource(G_RES_PATH "help-overlay.ui");
 	gtk_application_window_set_help_overlay(win,
 	                                        GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
 	g_object_unref(helpbuilder);
 #endif
-}
-
-static gboolean get_use_headerbar (void)
-{
-	gboolean use_headerbar = false;
-	GtkSettings *settings = gtk_settings_get_default();
-	g_object_get(settings, "gtk-dialogs-use-header", &use_headerbar, NULL);
-	return use_headerbar;
 }
 
 /*
@@ -498,8 +491,10 @@ bool PrefsEditor(void)
 		printf("Another instance of %s is running, quitting...\n", GetString(STR_WINDOW_TITLE));
 		return false;
 	}
-	builder = gtk_builder_new_from_resource(G_RES_PATH"ui/prefs-editor.ui");
-	gboolean use_headerbar = get_use_headerbar();
+	builder = gtk_builder_new_from_resource(G_RES_PATH "prefs-editor.ui");
+	bool use_headerbar = false;
+	GtkSettings *settings = gtk_settings_get_default();
+	g_object_get(settings, "gtk-dialogs-use-header", &use_headerbar, NULL);
 	set_file_menu(GTK_APPLICATION(app));
 
 	// Create window
@@ -518,7 +513,7 @@ bool PrefsEditor(void)
 	}
 	else
 	{
-	    gtk_window_set_titlebar(GTK_WINDOW(win), NULL);
+		gtk_window_set_titlebar(GTK_WINDOW(win), NULL);
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "action-bar")));
 	}
 	set_help_overlay(GTK_APPLICATION_WINDOW(win));
@@ -688,7 +683,7 @@ static void cb_create_volume_response (GtkWidget *chooser, int response, GtkEntr
 							(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
 							GTK_MESSAGE_WARNING,
 							GTK_BUTTONS_CLOSE,
-							"Enter a valid size");
+							"Enter a valid size", NULL);
 			gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "The volume size should be between 1 and 2000.");
 			gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(chooser));
 			g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
@@ -733,6 +728,7 @@ static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	gtk_widget_show(label);
 	GtkWidget *size_entry = gtk_entry_new();
 	gtk_widget_show(size_entry);
+	gtk_entry_set_activates_default(GTK_ENTRY(size_entry), true);
 	gtk_entry_set_text(GTK_ENTRY(size_entry), VOLUME_SIZE_DEFAULT);
 	gtk_box_pack_end(GTK_BOX(box), size_entry, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(box), label, FALSE, FALSE, 0);
@@ -1050,12 +1046,12 @@ void cb_entry (GtkWidget *widget)
 void cb_infobar_show (GtkWidget *widget)
 {
 #if GTK_CHECK_VERSION(3,22,29)
-    /* Workaround for the fact that having the revealed property in the XML is not valid
-    in older GTK versions. Instead we hide it until it is about to be revealed. */
-    if (!gtk_widget_get_visible(widget))
+	/* Workaround for the fact that having the revealed property in the XML is not valid
+	in older GTK versions. Instead we hide it until it is about to be revealed. */
+	if (!gtk_widget_get_visible(widget))
 	{
-	    gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
-	    gtk_widget_show(widget);
+		gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), false);
+		gtk_widget_show(widget);
 	}
 	gtk_info_bar_set_revealed(GTK_INFO_BAR(widget), true);
 #else
@@ -1090,7 +1086,7 @@ static void get_graphics_settings (void)
 	display_type = DISPLAY_WINDOW;
 	dis_width = 640;
 	dis_height = 480;
-	screen_mode = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-mode"));
+	screen_mode = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "screen-mode-full"));
 	screen_x = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-x"));
 	screen_y = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-y"));
 
@@ -1149,8 +1145,7 @@ static void get_graphics_settings (void)
 	if (dis_height == screen_height)
 		dis_height = 0;
 
-	if (display_type == DISPLAY_SCREEN)
-		gtk_combo_box_set_active(screen_mode, 1);
+	gtk_toggle_button_set_active(screen_mode, (display_type == DISPLAY_SCREEN));
 	g_autofree gchar *width_str = g_strdup_printf("%d", dis_width);
 	if (!gtk_combo_box_set_active_id(screen_x, width_str))
 	{
@@ -1185,7 +1180,7 @@ static GList *add_serial_names (void)
 #else
 			if (false) {
 #endif
-				g_autofree gchar *str = g_strdup_printf("/dev/%s", de->d_name);
+				gchar *str = g_strdup_printf("/dev/%s", de->d_name);
 				glist = g_list_append(glist, str);
 			}
 		}
@@ -1259,7 +1254,7 @@ bool DarwinCDReadTOC(char *, uint8 *) { }
 
 static GCallback dl_destroyed(GtkWidget *dialog)
 {
-    gtk_widget_destroy(dialog);
+	gtk_widget_destroy(dialog);
 	gtk_main_quit();
 	return NULL;
 }
@@ -1270,7 +1265,7 @@ void display_alert(int title_id, int prefix_id, int button_id, const char *text)
 						GTK_DIALOG_MODAL,
 						GTK_MESSAGE_WARNING,
 						GTK_BUTTONS_NONE,
-						GetString(title_id));
+						GetString(title_id), NULL);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), text);
 	gtk_dialog_add_button(GTK_DIALOG(dialog), GetString(button_id), GTK_RESPONSE_CLOSE);
 	g_signal_connect(dialog, "response", G_CALLBACK(dl_destroyed), NULL);
