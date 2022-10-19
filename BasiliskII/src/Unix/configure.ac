@@ -262,6 +262,56 @@ AC_CHECK_LIB(rt, timer_create)
 AC_CHECK_LIB(rt, shm_open)
 AC_CHECK_LIB(m, cos)
 
+dnl We want pthreads. Try libpthread first, then npth, then libc_r (FreeBSD), then PTL.
+HAVE_PTHREADS=no
+AC_SEARCH_LIBS([pthread_create], [pthread npth c_r PTL], [
+  HAVE_PTHREADS=yes
+])
+if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
+  AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
+fi
+AC_CHECK_FUNCS(pthread_cond_init)
+AC_CHECK_FUNCS(pthread_cancel pthread_testcancel)
+AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
+AC_CHECK_FUNCS(pthread_mutexattr_settype)
+AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
+
+dnl If POSIX.4 semaphores are not available, we emulate them with pthread mutexes.
+SEMSRC=
+AC_CHECK_FUNCS(sem_init, , [
+  if test "x$HAVE_PTHREADS" = "xyes"; then
+    SEMSRC=posix_sem.cpp
+  fi
+])
+
+dnl BINCUE
+AS_IF([test  "x$with_bincue" = "xyes" ], [have_bincue=yes], [have_bincue=no])
+AS_IF([test  "x$have_bincue" = "xyes" ], [
+   if [[ "x$WANT_SDL_AUDIO" = "xyes" ]]; then
+       DEFINES="$DEFINES -DBINCUE"
+       CPPFLAGS="$CPPFLAGS -DBINCUE"
+       AC_SUBST(USE_BINCUE, yes)
+   else
+       AC_MSG_ERROR([You need SDL Audio to use BINCUE support.])
+       AC_SUBST(USE_BINCUE, no)
+   fi
+], [AC_SUBST(USE_BINCUE, no)])
+
+dnl LIBVHD
+AS_IF([test  "x$with_libvhd" = "xyes" ], [have_libvhd=yes], [have_libvhd=no])
+AS_IF([test  "x$have_libvhd" = "xyes" ], [
+       CPPFLAGS="$CPPFLAGS -DHAVE_LIBVHD"
+	   LIBS="$LIBS -lvhd"
+	   case $target_os in
+	   linux*)
+	   LIBS="$LIBS -luuid"
+	   esac
+	   AC_CHECK_LIB(vhd, vhd_open)
+	   AC_CHECK_LIB(vhd, vhd_io_read)
+	   AC_CHECK_LIB(vhd, vhd_io_write)
+	   AC_CHECK_LIB(vhd, vhd_close)
+])
+
 # Check for pkg-config macro, thanks to rdiez
 m4_ifndef([PKG_PROG_PKG_CONFIG], [m4_fatal(
     [Macro PKG_PROG_PKG_CONFIG is not available. You need to install pkg-config.]
@@ -405,58 +455,6 @@ if [[ "x$WANT_MACOSX_GUI" = "xno" ]]; then
   ])
 fi
 
-dnl BINCUE
-AS_IF([test  "x$with_bincue" = "xyes" ], [have_bincue=yes], [have_bincue=no])
-AS_IF([test  "x$have_bincue" = "xyes" ], [
-   if [[ "x$WANT_SDL_AUDIO" = "xyes" ]]; then
-       DEFINES="$DEFINES -DBINCUE"
-       CPPFLAGS="$CPPFLAGS -DBINCUE"
-       AC_SUBST(USE_BINCUE, yes)
-   else
-       AC_MSG_ERROR([You need SDL Audio to use BINCUE support.])
-       AC_SUBST(USE_BINCUE, no)
-   fi
-], [AC_SUBST(USE_BINCUE, no)])
-
-dnl LIBVHD
-AS_IF([test  "x$with_libvhd" = "xyes" ], [have_libvhd=yes], [have_libvhd=no])
-AS_IF([test  "x$have_libvhd" = "xyes" ], [
-       CPPFLAGS="$CPPFLAGS -DHAVE_LIBVHD"
-	   LIBS="$LIBS -lvhd"
-	   case $target_os in
-	   linux*)
-	   LIBS="$LIBS -luuid" 
-	   esac
-	   AC_CHECK_LIB(vhd, vhd_open)
-	   AC_CHECK_LIB(vhd, vhd_io_read)
-	   AC_CHECK_LIB(vhd, vhd_io_write)
-	   AC_CHECK_LIB(vhd, vhd_close)
-])
-
-
-
-dnl We want pthreads. Try libpthread first, then npth, then libc_r (FreeBSD), then PTL.
-HAVE_PTHREADS=no
-AC_SEARCH_LIBS([pthread_create], [pthread npth c_r PTL], [
-  HAVE_PTHREADS=yes
-])
-if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
-  AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
-fi
-AC_CHECK_FUNCS(pthread_cond_init)
-AC_CHECK_FUNCS(pthread_cancel pthread_testcancel)
-AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
-AC_CHECK_FUNCS(pthread_mutexattr_settype)
-AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
-
-dnl If POSIX.4 semaphores are not available, we emulate them with pthread mutexes.
-SEMSRC=
-AC_CHECK_FUNCS(sem_init, , [
-  if test "x$HAVE_PTHREADS" = "xyes"; then
-    SEMSRC=posix_sem.cpp
-  fi
-])
-
 dnl We use DGA (XFree86 or fbdev) if possible.
 if [[ "x$WANT_XF86_DGA" = "xyes" ]]; then
   AC_CHECK_LIB(Xxf86dga, XF86DGAQueryExtension, [
@@ -490,12 +488,6 @@ if [[ "x$WANT_XF86_VIDMODE" = "xyes" ]]; then
     WANT_XF86_VIDMODE=no
   ])
 fi
-
-# Check for pkg-config macro, thanks to rdiez
-m4_ifndef([PKG_PROG_PKG_CONFIG], [m4_fatal(
-    [The PKG_PROG_PKG_CONFIG macro is not available. You need to install pkg-config.]
-)])
-PKG_PROG_PKG_CONFIG
 
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
@@ -594,8 +586,7 @@ AC_CHECK_SIZEOF(double, 8)
 AC_CHECK_SIZEOF(long double, 12)
 AC_CHECK_SIZEOF(void *, 4)
 AC_TYPE_OFF_T
-AC_CHECK_TYPE(loff_t)
-AC_CHECK_TYPE(caddr_t)
+AC_CHECK_TYPES([loff_t, caddr_t])
 AC_TYPE_SIZE_T
 
 AC_STRUCT_TM

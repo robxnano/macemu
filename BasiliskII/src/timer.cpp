@@ -293,7 +293,7 @@ void TimerExit(void)
 {
 #if PRECISE_TIMING
 	// Quit timer thread
-	if (timer_thread > 0) {
+	if (timer_thread != 0) {
 #ifdef PRECISE_TIMING_BEOS
 		status_t l;
 		thread_active = false;
@@ -337,7 +337,7 @@ void TimerReset(void)
 int16 InsTime(uint32 tm, uint16 trap)
 {
 	D(bug("InsTime %08lx, trap %04x\n", tm, trap));
-	WriteMacInt16(tm + qType, (ReadMacInt16(tm + qType) & 0x1fff) | ((trap << 4) & 0x6000));
+	WriteMacInt16((uint32)tm + qType, (ReadMacInt16((uint32)tm + qType) & 0x1fff) | ((trap << 4) & 0x6000));
 	if (find_desc(tm))
 		printf("WARNING: InsTime(%08x): Task re-inserted\n", tm);
 	else {
@@ -399,7 +399,7 @@ int16 RmvTime(uint32 tm)
 		WriteMacInt32(tm + tmCount, timer_host2mac_time(remaining));
 	} else
 		WriteMacInt32(tm + tmCount, 0);
-	D(bug(" tmCount %d\n", ReadMacInt32(tm + tmCount)));
+	D(bug(" tmCount %ld\n", ReadMacInt32(tm + tmCount)));
 #if PRECISE_TIMING_BEOS
 	release_sem(wakeup_time_sem);
 	thread_info info;
@@ -431,7 +431,7 @@ int16 RmvTime(uint32 tm)
 
 int16 PrimeTime(uint32 tm, int32 time)
 {
-	D(bug("PrimeTime %08x, time %d\n", tm, time));
+	D(bug("PrimeTime %08lx, time %ld\n", tm, time));
 
 	// Find descriptor
 	TMDesc *desc = find_desc(tm);
