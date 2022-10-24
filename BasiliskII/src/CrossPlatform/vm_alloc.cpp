@@ -80,14 +80,14 @@ typedef unsigned long vm_uintptr_t;
 #define MAP_ANON 0
 #endif
 #ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS 0
+#define MAP_ANONYMOUS MAP_ANON
 #endif
 
 #define MAP_EXTRA_FLAGS (MAP_32BIT)
 
 #ifdef HAVE_MMAP_VM
 #if (defined(__linux__) && defined(__i386__)) || defined(__sun__) || defined(__FreeBSD__) || defined(__NetBSD__) || HAVE_LINKER_SCRIPT
-/* Force a reasonnable address below 0x80000000 on x86 so that we
+/* Force a reasonable address below 0x80000000 on x86 so that we
    don't get addresses above when the program is run on AMD64.
    NOTE: this is empirically determined on Linux/x86.  */
 #define MAP_BASE	0x10000000
@@ -95,17 +95,12 @@ typedef unsigned long vm_uintptr_t;
 #define MAP_BASE	0x00000000
 #endif
 static char * next_address = (char *)MAP_BASE;
-#ifdef HAVE_MMAP_ANON
-#define map_flags	(MAP_ANON | MAP_EXTRA_FLAGS)
-#define zero_fd		-1
-#else
 #ifdef HAVE_MMAP_ANONYMOUS
 #define map_flags	(MAP_ANONYMOUS | MAP_EXTRA_FLAGS)
 #define zero_fd		-1
 #else
 #define map_flags	(MAP_EXTRA_FLAGS)
 static int zero_fd	= -1;
-#endif
 #endif
 #endif
 

@@ -28,6 +28,14 @@ extern bool PrefsEditor(void);
 #endif
 
 #if defined(ENABLE_GTK) || defined(STANDALONE_GUI)
+
+#if !GLIB_CHECK_VERSION(2,24,0)
+#define GVariant void
+#endif
+#if !GLIB_CHECK_VERSION(2,28,0)
+#define GSimpleAction void
+#endif
+
 static GtkWidget *create_tree_view (void);
 static void cb_add_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
 static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);

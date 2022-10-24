@@ -42,14 +42,15 @@ AC_ARG_ENABLE(xf86-dga,     [  --enable-xf86-dga       use the XFree86 DGA exten
 AC_ARG_ENABLE(xf86-vidmode, [  --enable-xf86-vidmode   use the XFree86 VidMode extension [default=yes]], [WANT_XF86_VIDMODE=$enableval], [WANT_XF86_VIDMODE=yes])
 AC_ARG_ENABLE(vosf,         [  --enable-vosf           enable video on SEGV signals [default=no]], [WANT_VOSF=$enableval], [WANT_VOSF=no])
 AC_ARG_ENABLE(standalone-gui,[  --enable-standalone-gui enable a standalone GUI prefs editor [default=no]], [WANT_STANDALONE_GUI=$enableval], [WANT_STANDALONE_GUI=no])
-AC_ARG_WITH(esd,            [  --with-esd              support ESD for sound under Linux/FreeBSD [default=yes]], [WANT_ESD=$withval], [WANT_ESD=yes])
-AC_ARG_WITH(gtk,            [  --with-gtk              use GTK2 or GTK3 for user interface [default=GTK3]],
+AC_ARG_WITH(esd,            [  --with-esd              support ESD for sound under Linux/FreeBSD [default=auto]], [WANT_ESD=$withval], [WANT_ESD=auto])
+AC_ARG_WITH(gtk,            [  --with-gtk              use GTK2 or GTK3 for user interface [default=any]],
   [case "$withval" in
-   none|false)	WANT_GTK="no";;
-   GTK2|gtk2)	WANT_GTK="GTK2";;
-   *)	   	WANT_GTK="GTK3";;
+   *3)	WANT_GTK="GTK3";;
+   *2)	WANT_GTK="GTK2";;
+   no)	WANT_GTK="no";;
+   *)	WANT_GTK="any";;
    esac],
-  [WANT_GTK="GTK3"])
+  [WANT_GTK="any"])
 AC_ARG_WITH(mon,            [  --with-mon              use mon as debugger [default=yes]], [WANT_MON=$withval], [WANT_MON=no])
 AC_ARG_WITH(dgcc,           [  --with-dgcc=COMPILER    use C++ COMPILER to compile synthetic opcodes or 'precompiled'], [DYNGEN_CC=$withval], [DYNGEN_CC=precompiled])
 
@@ -220,6 +221,9 @@ fi
 if [[ "x$WANT_SDL_AUDIO" = "xyes" ]]; then
   WANT_SDL=yes
   SDL_SUPPORT="$SDL_SUPPORT audio"
+  if [[ "$WANT_ESD" = "auto" ]]; then
+    WANT_ESD=no
+  fi
 fi
 if [[ "x$WANT_SDL" = "xyes" ]]; then
   if [[ "x$WANT_SDL_FRAMEWORK" = "xyes" ]]; then
@@ -242,53 +246,44 @@ if [[ "x$WANT_SDL" = "xyes" ]]; then
   else
     ac_cv_framework_SDL=no
   fi
+  saved_PKG_CONFIG="$PKG_CONFIG"
+  if [[ "$WANT_SDL_STATIC" = "yes" ]]; then
+    PKG_CONFIG="$PKG_CONFIG --static"
+  fi
   if [[ "x$ac_cv_framework_SDL" = "xno" ]]; then
     TEMP_WANT_SDL_VERSION_MAJOR=$WANT_SDL_VERSION_MAJOR
     if [[ "x$TEMP_WANT_SDL_VERSION_MAJOR" = "x" ]]; then
       TEMP_WANT_SDL_VERSION_MAJOR=2
     fi
     if [[ "x$TEMP_WANT_SDL_VERSION_MAJOR" = "x2" ]]; then
-      if [[ "$WANT_SDL_STATIC" = "yes" ]]; then
-        PKG_CHECK_MODULES_STATIC([SDL2], [sdl2 >= 2.0], [
-          WANT_SDL_VERSION_MAJOR=2
-        ], [
-          TEMP_WANT_SDL_VERSION_MAJOR=1
-        ])
-      else
-        PKG_CHECK_MODULES([SDL2], [sdl2 >= 2.0], [
-          WANT_SDL_VERSION_MAJOR=2
-        ], [
-          TEMP_WANT_SDL_VERSION_MAJOR=1
-        ])
-      fi
-      CFLAGS="$CFLAGS $SDL2_CFLAGS"
-      CXXFLAGS="$CXXFLAGS $SDL2_CFLAGS"
-      LIBS="$LIBS $SDL2_LIBS"
+      PKG_CHECK_MODULES([SDL2], [sdl2 >= 2.0.5], [
+        WANT_SDL_VERSION_MAJOR=2
+        CFLAGS="$CFLAGS $SDL2_CFLAGS"
+        CXXFLAGS="$CXXFLAGS $SDL2_CFLAGS"
+        LIBS="$LIBS $SDL2_LIBS"
+      ], [
+        TEMP_WANT_SDL_VERSION_MAJOR=1
+      ])
     fi
     if [[ "x$TEMP_WANT_SDL_VERSION_MAJOR" = "x1" ]]; then
-      if [[ "$WANT_SDL_STATIC" = "yes" ]]; then
-        PKG_CHECK_MODULES_STATIC([SDL], [sdl >= 1.2], [
-          WANT_SDL_VERSION_MAJOR=1
-        ], [
-          WANT_SDL=no
-          WANT_SDL_VERSION_MAJOR=
-        ])
-      else
-        PKG_CHECK_MODULES([SDL], [sdl >= 1.2], [
-          WANT_SDL_VERSION_MAJOR=1
-        ], [
-          WANT_SDL=no
-          WANT_SDL_VERSION_MAJOR=
-        ])
-      fi
-      CFLAGS="$CFLAGS $SDL_CFLAGS"
-      CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
-      LIBS="$LIBS $SDL_LIBS"
+      PKG_CHECK_MODULES([SDL], [sdl >= 1.2], [
+        WANT_SDL_VERSION_MAJOR=1
+        CFLAGS="$CFLAGS $SDL_CFLAGS"
+        CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
+        LIBS="$LIBS $SDL_LIBS"
+      ], [
+        WANT_SDL=no
+      ])
     fi
   fi
+  PKG_CONFIG="$saved_PKG_CONFIG"
   SDL_SUPPORT=`echo "$SDL_SUPPORT" | sed -e "s/^ //"`
-else
-  SDL_SUPPORT="none"
+fi
+if [[ "$WANT_SDL" = "no" ]]; then
+  SDL_SUPPORT=no
+  WANT_SDL_VERSION_MAJOR=
+  WANT_SDL_AUDIO=no
+  WANT_SDL_VIDEO=no
 fi
 
 dnl We need X11.
@@ -296,7 +291,7 @@ PKG_CHECK_MODULES([X11], [x11 xext], [
   CFLAGS="$CFLAGS $X11_CFLAGS"
   CXXFLAGS="$CXXFLAGS $X11_CFLAGS"
   LIBS="$LIBS $X11_LIBS"], [
-    AC_MSG_ERROR([You need X11 development libraries to compile SheepShaver.])
+  AC_MSG_ERROR([You need X11 development libraries to compile SheepShaver.])
 ])
 
 dnl We use XFree86 DGA if possible.
@@ -324,8 +319,9 @@ fi
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
 case "$WANT_GTK" in
-GTK3)
+GTK3|any)
   PKG_CHECK_MODULES([GTK3], [gtk+-3.0 >= 3.14.5], [
+    WANT_GTK=GTK3
     GUI_CFLAGS="$GTK3_CFLAGS"
     GUI_LIBS="$GTK3_LIBS"
     AC_CHECK_PROG([ac_cv_gcr], [glib-compile-resources], [yes])
@@ -335,19 +331,27 @@ GTK3)
       AC_MSG_ERROR([glib-compile-resources not found.])
     fi
   ], [
-    AC_MSG_WARN([Could not find GTK3 (version >= 3.14.5), disabling user interface.])
-    WANT_GTK=no
+    if [[ "$WANT_GTK" = "any" ]]; then
+      AC_MSG_WARN([Could not find GTK3 (version >= 3.14.5), falling back to GTK2.])
+      WANT_GTK=GTK2
+    else
+      AC_MSG_WARN([Could not find GTK3 (version >= 3.14.5), disabling user interface.])
+      WANT_GTK=no
+    fi
   ])
-  ;;
-GTK2)
+;;
+esac
+case "$WANT_GTK" in
+GTK2|any)
   PKG_CHECK_MODULES([GTK2], [gtk+-2.0 >= 2.6.4], [
+    WANT_GTK=GTK2
     GUI_CFLAGS="$GTK2_CFLAGS"
     GUI_LIBS="$GTK2_LIBS"
   ], [
     AC_MSG_WARN([Could not find GTK2 (version >= 2.6.4), disabling user interface.])
     WANT_GTK=no
   ])
-  ;;
+;;
 esac
 if [[ "x$WANT_GTK" != "xno" -a "x$WANT_STANDALONE_GUI" = "xno" ]]; then
   AC_DEFINE(ENABLE_GTK, 1, [Define if using GTK.])
@@ -372,8 +376,7 @@ fi
 AC_SUBST(STANDALONE_GUI, [$WANT_STANDALONE_GUI])
 
 dnl We use ESD if possible.
-if [[ "x$WANT_ESD" = "xyes" ]]; then
-  WANT_ESD=no
+if [[ "$WANT_ESD" != "no" ]]; then
   PKG_CHECK_MODULES([ESD], [esound >= 0.2.8], [
     AC_DEFINE(ENABLE_ESD, 1, [Define if using ESD.])
     CFLAGS="$CFLAGS $ESD_CFLAGS"
@@ -381,7 +384,8 @@ if [[ "x$WANT_ESD" = "xyes" ]]; then
     LIBS="$LIBS $ESD_LIBS"
     WANT_ESD=yes
   ], [
-    AC_MSG_WARN([Could not find ESD, disabling ESD support.])
+    AC_MSG_WARN([Could not find ESD (version >= 0.2.8), disabling ESD support.])
+    WANT_ESD=no
   ])
 fi
 
@@ -568,10 +572,11 @@ AC_CACHE_CHECK([whether compiler supports byte bit-fields],
       A a;
       return ! (sizeof(A) == 8 && &a.c == ((unsigned char *)&a + 1));
     }]])],[
-    ac_cv_have_byte_bitfields=yes],[
-    ac_cv_have_byte_bitfields=no],[
-    dnl When cross-compiling do not assume anything.
-    ac_cv_signal_sa_restorer=no])
+      ac_cv_have_byte_bitfields=yes],[
+      ac_cv_have_byte_bitfields=no],[
+      dnl When cross-compiling do not assume anything.
+      ac_cv_signal_sa_restorer=no
+    ])
   AC_LANG_POP([C++])
 ])
 
@@ -582,7 +587,7 @@ AC_DEFUN([AC_CHECK_FRAMEWORK], [
     ac_Framework, [
     saved_LIBS="$LIBS"
     LIBS="$LIBS -framework $1"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([[$2]], [[]])],[AS_VAR_SET(ac_Framework, yes)],[AS_VAR_SET(ac_Framework, no); LIBS="$saved_LIBS"
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[$2]], [])],[AS_VAR_SET(ac_Framework, yes)],[AS_VAR_SET(ac_Framework, no); LIBS="$saved_LIBS"
     ])
   ])
   AS_IF([test AS_VAR_GET(ac_Framework) = yes],
@@ -743,9 +748,6 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
     CPPFLAGS="$CPPFLAGS -I../MacOSX"
   else
     EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
-    if [[ "$WANT_GTK" != "no" ]]; then
-      LIBS="$LIBS -lX11"
-    fi
   fi
 else
   VIDEOSRCS="video_x.cpp"
@@ -831,19 +833,21 @@ AC_CACHE_CHECK([whether vm_protect works],
       #define TEST_VM_PROT_$test_def
       #include "../CrossPlatform/vm_alloc.cpp"
     ]])],[
-    ac_cv_vm_protect_works=no],[
-    rm -f core],[
-    dnl When cross-compiling do not assume anything.
-    ac_cv_vm_protect_works="guessing no"])
+      ac_cv_vm_protect_works=no],[
+      rm -f core],[
+      dnl When cross-compiling do not assume anything.
+      ac_cv_vm_protect_works="guessing no"
+    ])
   done
   AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_PROT_RDWR_WRITE
     #include "../CrossPlatform/vm_alloc.cpp"
   ]])],[],[
-  ac_cv_vm_protect_works=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_vm_protect_works="guessing no"])
+    ac_cv_vm_protect_works=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_vm_protect_works="guessing no"
+  ])
   AC_LANG_POP([C++])
   ]
 )
@@ -875,44 +879,25 @@ AC_TRANSLATE_DEFINE(HAVE_MMAP_VM, "$have_mmap_vm",
 dnl Check that mmap() and associated functions work.
 if [[ "x$have_mmap_vm" = "xyes" ]]; then
 
-dnl Check if we have a working anonymous mmap()
-AC_CACHE_CHECK([whether mmap supports MAP_ANON],
-  ac_cv_mmap_anon, [
-  AC_LANG_PUSH([C++])
-  AC_RUN_IFELSE([AC_LANG_SOURCE([[
-    #define HAVE_MMAP_ANON
-    #define CONFIGURE_TEST_VM_MAP
-    #define TEST_VM_MMAP_ANON
-    #include "../CrossPlatform/vm_alloc.cpp"
-  ]])],[
-  ac_cv_mmap_anon=yes],[
-  ac_cv_mmap_anon=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_mmap_anon="guessing no"])
-  AC_LANG_POP([C++])
-  ]
-)
-AC_TRANSLATE_DEFINE(HAVE_MMAP_ANON, "$ac_cv_mmap_anon",
-  [Define if <sys/mman.h> defines MAP_ANON and mmap()'ing with MAP_ANON works.])
-
-AC_CACHE_CHECK([whether mmap supports MAP_ANONYMOUS],
+AC_CACHE_CHECK([whether mmap supports anonymous mapping],
   ac_cv_mmap_anonymous, [
   AC_LANG_PUSH([C++])
   AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    #ifndef MAP_ANONYMOUS
+    #define MAP_ANONYMOUS MAP_ANON
+    #endif
     #define HAVE_MMAP_ANONYMOUS
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_MMAP_ANON
     #include "../CrossPlatform/vm_alloc.cpp"
-  ]])],[
-  ac_cv_mmap_anonymous=yes],[
-  ac_cv_mmap_anonymous=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_mmap_anonymous="guessing no"])
+  ]])],[ac_cv_mmap_anonymous=yes],[ac_cv_mmap_anonymous=no],[
+    dnl When cross-compiling, do not assume anything.
+    ac_cv_mmap_anonymous="$BII_CROSS_MMAP_SUPPORTS_MAP_ANONYMOUS"
+  ])
   AC_LANG_POP([C++])
-  ]
-)
+])
 AC_TRANSLATE_DEFINE(HAVE_MMAP_ANONYMOUS, "$ac_cv_mmap_anonymous",
-  [Define if <sys/mman.h> defines MAP_ANONYMOUS and mmap()'ing with MAP_ANONYMOUS works.])
+  [Define if <sys/mman.h> defines a working MAP_ANONYMOUS or MMAP_ANON.])
 
 AC_CACHE_CHECK([whether mprotect works],
   ac_cv_mprotect_works, [
@@ -925,22 +910,23 @@ AC_CACHE_CHECK([whether mprotect works],
       #define TEST_VM_PROT_$test_def
       #include "../CrossPlatform/vm_alloc.cpp"
     ]])],[
-    ac_cv_mprotect_works=no],[
-    rm -f core],[
-    dnl When cross-compiling do not assume anything.
-    ac_cv_mprotect_works="guessing no"])
+      ac_cv_mprotect_works=no],[
+      rm -f core],[
+      dnl When cross-compiling do not assume anything.
+      ac_cv_mprotect_works="guessing no"
+    ])
   done
   AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #define CONFIGURE_TEST_VM_MAP
     #define TEST_VM_PROT_RDWR_WRITE
     #include "../CrossPlatform/vm_alloc.cpp"
   ]])],[],[
-  ac_cv_mprotect_works=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_mprotect_works="guessing no"])
+    ac_cv_mprotect_works=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_mprotect_works="guessing no"
+  ])
   AC_LANG_POP([C++])
-  ]
-)
+])
 
 dnl Remove support for mmap() if mprotect() does not work
 if [[ "x$have_mmap_vm" = "xyes" ]]; then
@@ -984,13 +970,13 @@ AC_CACHE_CHECK([whether signal handlers need to be reinstalled],
       exit(handled_signal == 2);
     }
   ]])],[
-  ac_cv_signal_need_reinstall=yes],[
-  ac_cv_signal_need_reinstall=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_signal_need_reinstall="guessing yes"])
+    ac_cv_signal_need_reinstall=yes],[
+    ac_cv_signal_need_reinstall=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_signal_need_reinstall="guessing yes"
+  ])
   AC_LANG_POP([C++])
-  ]
-)
+])
 AC_TRANSLATE_DEFINE(SIGNAL_NEED_REINSTALL, "$ac_cv_signal_need_reinstall",
   [Define if your system requires signals to be reinstalled.])
 
@@ -1018,13 +1004,13 @@ AC_CACHE_CHECK([whether sigaction handlers need to be reinstalled],
       exit(handled_signal == 2);
     }
   ]])],[
-  ac_cv_sigaction_need_reinstall=yes],[
-  ac_cv_sigaction_need_reinstall=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_sigaction_need_reinstall="guessing yes"])
+    ac_cv_sigaction_need_reinstall=yes],[
+    ac_cv_sigaction_need_reinstall=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_sigaction_need_reinstall="guessing yes"
+  ])
   AC_LANG_POP([C++])
-  ]
-)
+])
 AC_TRANSLATE_DEFINE(SIGACTION_NEED_REINSTALL, "$ac_cv_sigaction_need_reinstall",
   [Define if your system requires sigactions to be reinstalled.])
 
@@ -1038,13 +1024,14 @@ AC_CACHE_CHECK([whether your system supports Mach exceptions],
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
   ]])],[
-  ac_cv_have_mach_exceptions=yes],[
-  ac_cv_have_mach_exceptions=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_have_mach_exceptions=no])
+    ac_cv_have_mach_exceptions=yes],[
+    ac_cv_have_mach_exceptions=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_have_mach_exceptions=no
+  ])
   AC_LANG_POP([C++])
-  ]
-)
+])
+
 if [[ "$ac_cv_have_mach_exceptions" = "yes" ]]; then
   sigsegv_recovery=mach
 fi
@@ -1061,15 +1048,14 @@ AC_CACHE_CHECK([whether your system supports Windows exceptions],
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
   ]])],[
-  sigsegv_recovery=win32
-  ac_cv_have_win32_exceptions=yes],[
-  ac_cv_have_win32_exceptions=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_have_win32_exceptions=no
+    sigsegv_recovery=win32
+    ac_cv_have_win32_exceptions=yes],[
+    ac_cv_have_win32_exceptions=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_have_win32_exceptions=no
   ])
   AC_LANG_POP([C++])
-  ]
-)
+])
 AC_TRANSLATE_DEFINE(HAVE_WIN32_EXCEPTIONS, "$ac_cv_have_win32_exceptions",
   [Define if your system supports Windows exceptions.])
 
@@ -1084,10 +1070,10 @@ if [[ -z "$sigsegv_recovery" ]]; then
       #include "../CrossPlatform/vm_alloc.cpp"
       #include "../CrossPlatform/sigsegv.cpp"
     ]])],[
-    ac_cv_have_extended_signals=yes],[
-    ac_cv_have_extended_signals=no],[
-    dnl When cross-compiling do not assume anything.
-    ac_cv_have_extended_signals=no
+      ac_cv_have_extended_signals=yes],[
+      ac_cv_have_extended_signals=no],[
+      dnl When cross-compiling do not assume anything.
+      ac_cv_have_extended_signals=no
     ])
     AC_LANG_POP([C++])
     ]
@@ -1110,10 +1096,11 @@ if [[ -z "$sigsegv_recovery" ]]; then
       #include "../CrossPlatform/vm_alloc.cpp"
       #include "../CrossPlatform/sigsegv.cpp"
     ]])],[
-    ac_cv_have_sigcontext_hack=yes],[
-    ac_cv_have_sigcontext_hack=no],[
-    dnl When cross-compiling do not assume anything.
-    ac_cv_have_sigcontext_hack=no])
+      ac_cv_have_sigcontext_hack=yes],[
+      ac_cv_have_sigcontext_hack=no],[
+      dnl When cross-compiling do not assume anything.
+      ac_cv_have_sigcontext_hack=no
+    ])
     AC_LANG_POP([C++])
   ])
   if [[ "$ac_cv_have_sigcontext_hack" = "yes" ]]; then
@@ -1133,13 +1120,13 @@ AC_CACHE_CHECK([whether we can skip instruction in SIGSEGV handler],
     #include "../CrossPlatform/vm_alloc.cpp"
     #include "../CrossPlatform/sigsegv.cpp"
   ]])],[
-  ac_cv_have_skip_instruction=yes],[
-  ac_cv_have_skip_instruction=no],[
-  dnl When cross-compiling do not assume anything.
-  ac_cv_have_skip_instruction=no])
+    ac_cv_have_skip_instruction=yes],[
+    ac_cv_have_skip_instruction=no],[
+    dnl When cross-compiling do not assume anything.
+    ac_cv_have_skip_instruction=no
+  ])
   AC_LANG_POP([C++])
-  ]
-)
+])
 
 if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" ]]; then
   ac_cv_have_skip_instruction=yes
@@ -1398,9 +1385,9 @@ dnl Check for compiler version.
 AC_LANG_PUSH([C++])
 AX_COMPILER_VERSION
 AC_LANG_POP([C++])
-AX_COMPARE_VERSION(["$ax_cv_cxx_compiler_version"], [ge], [2.7], [HAVE_GXX27=yes], [HAVE_GXX27=no])
-AX_COMPARE_VERSION(["$ax_cv_cxx_compiler_version"], [ge], [3.0], [HAVE_GXX30=yes], [HAVE_GXX30=no])
-AX_COMPARE_VERSION(["$ax_cv_cxx_compiler_version"], [ge], [4.0], [HAVE_GXX40=yes], [HAVE_GXX40=no])
+if [[ "$ax_cv_cxx_compiler_vendor" = "gnu" ]]; then
+  AX_COMPARE_VERSION(["$ax_cv_cxx_compiler_version"], [ge], [2.7], [HAVE_GXX27=yes], [HAVE_GXX27=no])
+fi
 
 dnl Determine the generated object format
 AC_CACHE_CHECK([the format of compiler generated objects],
@@ -1424,31 +1411,43 @@ AC_CACHE_CHECK([the format of compiler generated objects],
 ])
 
 dnl Add -fno-strict-aliasing for slirp sources
-if [[ "x$HAVE_GXX30" = "xyes" ]]; then
-  SAVED_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -fno-strict-aliasing"
-  AC_CACHE_CHECK([whether the compiler supports -fno-strict-aliasing],
-    ac_cv_gcc_no_strict_aliasing, [
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[ac_cv_gcc_no_strict_aliasing=yes],[ac_cv_gcc_no_strict_aliasing=no])
-  ])
-  if [[ "x$ac_cv_gcc_no_strict_aliasing" = "xyes" ]]; then
-    AC_SUBST(SLIRP_CFLAGS, "-fno-strict-aliasing")
-  fi
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -fno-strict-aliasing"
+AC_CACHE_CHECK([whether the compiler supports -fno-strict-aliasing],
+  ac_cv_gcc_no_strict_aliasing, [
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[ac_cv_gcc_no_strict_aliasing=yes],[ac_cv_gcc_no_strict_aliasing=no])
+])
+if [[ "x$ac_cv_gcc_no_strict_aliasing" = "xyes" ]]; then
+  AC_SUBST(SLIRP_CFLAGS, "-fno-strict-aliasing")
+fi
+CFLAGS="$SAVED_CFLAGS"
+
+dnl Add -mdynamic-no-pic for MacOS X (XXX icc10 will support MacOS X)
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -mdynamic-no-pic"
+AC_CACHE_CHECK([whether the compiler supports -mdynamic-no-pic],
+  ac_cv_gcc_mdynamic_no_pic, [
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[ac_cv_gcc_mdynamic_no_pic=yes],[ac_cv_gcc_mdynamic_no_pic=no])
+])
+if [[ "x$ac_cv_gcc_mdynamic_no_pic" = "xyes" ]]; then
+  CXXFLAGS="$CXXFLAGS -mdynamic-no-pic"
+else
   CFLAGS="$SAVED_CFLAGS"
 fi
 
-dnl Add -mdynamic-no-pic for MacOS X (XXX icc10 will support MacOS X)
-if [[ "x$HAVE_GXX30" = "xyes" ]]; then
-  SAVED_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -mdynamic-no-pic"
-  AC_CACHE_CHECK([whether the compiler supports -mdynamic-no-pic],
-    ac_cv_gcc_mdynamic_no_pic, [
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[ac_cv_gcc_mdynamic_no_pic=yes],[ac_cv_gcc_mdynamic_no_pic=no])
+if [[ "$WANT_GTK" = "GTK3" ]]; then
+  AC_CACHE_CHECK([whether the compiler supports -rdynamic],
+    ac_cv_rdynamic, [
+    saved_LDFLAGS="$LDFLAGS"
+    LDFLAGS="$LDFLAGS -rdynamic"
+    AC_LINK_IFELSE([AC_LANG_PROGRAM()],[
+      ac_cv_rdynamic="yes"],[
+      ac_cv_rdynamic="no"
+      LDFLAGS="$saved_LDFLAGS"
+    ])
   ])
-  if [[ "x$ac_cv_gcc_mdynamic_no_pic" = "xyes" ]]; then
-    CXXFLAGS="$CXXFLAGS -mdynamic-no-pic"
-  else
-    CFLAGS="$SAVED_CFLAGS"
+  if [[ "$ac_cv_rdynamic" = "no" ]]; then
+    AC_MSG_WARN([SheepShaver may not work with this compiler. Please use GCC or clang.])
   fi
 fi
 
@@ -1607,11 +1606,17 @@ if [[ -n "$LINKER_SCRIPT_FLAGS" ]]; then
     AC_LANG_PUSH([C++])
     saved_LDFLAGS="$LDFLAGS"
     LDFLAGS="$LDFLAGS $LINKER_SCRIPT_FLAGS"
-    AC_RUN_IFELSE([AC_LANG_SOURCE([[int main() {if ((char *)&main < (char *)0x70000000) return 1;}]])],[
-    ac_cv_linker_script_works=yes],[
-    ac_cv_linker_script_works=no],[
-    dnl When cross-compiling assume it works.
-    ac_cv_linker_script_works="guessing yes"])
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
+      int main() {
+        if ((char *)&main < (char *)0x70000000)
+          return 1;
+      }
+    ]])],[
+      ac_cv_linker_script_works=yes],[
+      ac_cv_linker_script_works=no],[
+      dnl When cross-compiling assume it works.
+      ac_cv_linker_script_works="guessing yes"
+    ])
     AC_LANG_POP([C++])
     if [[ "$ac_cv_linker_script_works" = "no" ]]; then
       LDFLAGS="$saved_LDFLAGS"
@@ -1642,23 +1647,22 @@ Makefile
 AC_OUTPUT
 
 dnl Print summary.
-echo
-echo SheepShaver configuration summary:
-echo
-echo SDL support ...................... : $SDL_SUPPORT
-echo SDL major-version ................ : $WANT_SDL_VERSION_MAJOR
-echo BINCUE support ................... : $have_bincue
-echo LIBVHD support ................... : $have_libvhd
-echo FBDev DGA support ................ : $WANT_FBDEV_DGA
-echo XFree86 DGA support .............. : $WANT_XF86_DGA
-echo XFree86 VidMode support .......... : $WANT_XF86_VIDMODE
-echo Using PowerPC emulator ........... : $EMULATED_PPC
-echo Enable JIT compiler .............. : $WANT_JIT
-echo Enable video on SEGV signals ..... : $WANT_VOSF
-echo ESD sound support ................ : $WANT_ESD
-echo GTK user interface ............... : $WANT_GTK
-echo mon debugger support ............. : $WANT_MON
-echo Addressing mode .................. : $WANT_ADDRESSING_MODE
-echo Bad memory access recovery type .. : $sigsegv_recovery
-echo
-echo "Configuration done. Now type \"$_cv_gnu_make_command\"."
+AC_MSG_NOTICE([SheepShaver configuration summary:
+
+  SDL support:                  $SDL_SUPPORT
+  SDL major-version:            $WANT_SDL_VERSION_MAJOR
+  BINCUE support:               $have_bincue
+  LIBVHD support:               $have_libvhd
+  FBDev DGA support:            $WANT_FBDEV_DGA
+  XFree86 DGA support:          $WANT_XF86_DGA
+  XFree86 VidMode support:      $WANT_XF86_VIDMODE
+  Using PowerPC emulator:       $EMULATED_PPC
+  Enable JIT compiler:          $WANT_JIT
+  Enable video on SEGV signals: $WANT_VOSF
+  ESD sound support:            $WANT_ESD
+  GTK user interface:           $WANT_GTK
+  mon debugger support:         $WANT_MON
+  Addressing mode:              $WANT_ADDRESSING_MODE
+  Bad memory access recovery:   $sigsegv_recovery
+
+Configuration done. Now type "$_cv_gnu_make_command".])
