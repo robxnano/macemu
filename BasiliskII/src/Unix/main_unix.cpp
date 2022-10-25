@@ -69,6 +69,10 @@ struct sigstate {
 # endif
 #endif
 
+#ifdef ENABLE_GTK3
+#include "color_scheme.h"
+#endif
+
 #ifdef ENABLE_XF86_DGA
 # include <X11/Xutil.h>
 # include <X11/extensions/Xxf86dga.h>
@@ -417,6 +421,9 @@ GtkWindow *win;
 
 static void gui_startup (void)
 {
+#ifdef ENABLE_GTK3
+	color_scheme_set(APP_PREFERS_LIGHT);
+#endif
 	if (!PrefsEditor())
 		QuitEmulator();
 }

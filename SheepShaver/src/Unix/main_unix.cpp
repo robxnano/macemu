@@ -137,6 +137,11 @@
 #include <X11/Xlib.h>
 #endif
 #endif
+
+#ifdef ENABLE_GTK3
+#include "color_scheme.h"
+#endif
+
 #include "prefs_editor.h"
 
 #ifdef ENABLE_XF86_DGA
@@ -747,6 +752,9 @@ GtkWindow *win;
 
 static void gui_startup (void)
 {
+#ifdef ENABLE_GTK3
+    color_scheme_set(APP_PREFERS_LIGHT);
+#endif
 	if (use_gui && !PrefsEditor())
 		QuitEmulator();
 }
