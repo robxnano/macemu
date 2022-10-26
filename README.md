@@ -11,7 +11,8 @@ Linux x86 x86_64 JIT / arm64 non-JIT
 MinGW x86        JIT
 ```
 ### How To Build
-These builds need to be installed SDL2.0.14+ framework/library.
+These builds need SDL 2.0.5+ framework/library to be installed.
+Alternatively, SDL 1.2 can be used, but with fewer features.
 
 https://www.libsdl.org
 #### BasiliskII
@@ -38,7 +39,7 @@ $ make
 $ make check
 $ sudo make install
 ```
-On an Intel Mac, change the `configure` command for both GMP and MPFR as follows, and ignore the `make check` command:
+On an Apple Silicon Mac, change the `configure` command for both GMP and MPFR as follows, and ignore the `make check` command:
 ```
 CFLAGS="-arch arm64" CXXFLAGS="$CFLAGS" ./configure -host=aarch64-apple-darwin --disable-shared 
 ```
@@ -52,12 +53,16 @@ $ xcodebuild build -project BasiliskII.xcodeproj -configuration Release
 or same as Linux
 
 ##### Linux
-preparation (arm64 only): Install GMP and MPFR.
+Required libraries:
+Debian/Ubuntu: build-essential libgtk-3-dev libsdl2-dev
+Red Hat/Fedora/SUSE: gcc-c++ make automake pkgconf gtk3-devel SDL2-devel
+arm64 only: libgmp-dev libmpfr-dev / gmp-devel mpfr-devel
 ```
 $ cd macemu/BasiliskII/src/Unix
 $ ./autogen.sh
 $ make
 ```
+Other Unix systems such as FreeBSD may also work.
 ##### MinGW32/MSYS2
 ```
 $ cd macemu/BasiliskII/src/Windows
