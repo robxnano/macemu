@@ -44,6 +44,7 @@ static GList *add_serial_names(void);
 static GList *add_ether_names(void);
 static void save_volumes(void);
 static void get_graphics_settings(void);
+static void get_mouse_wheel_mode(void);
 static bool is_jit_capable(void);
 static void hide_widget(GtkWidget *widget);
 extern "C" {

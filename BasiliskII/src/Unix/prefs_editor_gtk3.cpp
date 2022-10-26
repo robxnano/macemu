@@ -52,7 +52,8 @@ static bool start_clicked = false;	// Return value of PrefsEditor() function
 static int screen_width, screen_height; // Screen dimensions
 
 
-static GtkToggleButton *screen_mode;
+static GtkToggleButton *screen_full;
+static GtkToggleButton *screen_win;
 static GtkComboBox *screen_x;
 static GtkComboBox *screen_y;
 
@@ -138,7 +139,7 @@ const gchar *version = g_strdup_printf("%d.%d", VERSION_MAJOR, VERSION_MINOR);
 // The widgets from prefs-editor.ui that need their values set on launch
 const char *check_boxes[] = {
 	"udptunnel", "keycodes", "ignoresegv", "idlewait", "jit", "jitfpu", "jitinline",
-	"jitlazyflush", "jit68k", "mousewheelmode", "gfxaccel", "swap_opt_cmd", NULL };
+	"jitlazyflush", "jit68k", "gfxaccel", "swap_opt_cmd", NULL };
 const char *inv_check_boxes[] = { "nocdrom", "nosound", "nogui", NULL };
 const char *entries[] = {
 	"extfs", "dsp", "mixer", "keycodefile", "scsi0", "scsi1", "scsi2", "scsi3", "scsi4",
@@ -268,9 +269,9 @@ void cb_screen_mode(GtkWidget *widget)
 	if (int_y < 0) int_y = 0;
 
 #ifdef ENABLE_FBDEV_DGA
-	const char *str = gtk_toggle_button_get_active(screen_mode) ? "fbdev/%d/%d" : "win/%d/%d";
+	const char *str = gtk_toggle_button_get_active(screen_full) ? "fbdev/%d/%d" : "win/%d/%d";
 #else
-	const char *str = gtk_toggle_button_get_active(screen_mode) ? "dga/%d/%d" : "win/%d/%d";
+	const char *str = gtk_toggle_button_get_active(screen_full) ? "dga/%d/%d" : "win/%d/%d";
 #endif
 	g_autofree gchar *screen = g_strdup_printf(str, int_x, int_y);
 	PrefsReplaceString("screen", screen);
@@ -463,8 +464,14 @@ static void set_file_menu(GtkApplication *app)
 {
 	GtkBuilder *menubuilder = gtk_builder_new_from_resource(G_RES_PATH "menu.ui");
 	GtkMenuButton *menu_button = GTK_MENU_BUTTON(gtk_builder_get_object(builder, "menu-button"));
-	gtk_menu_button_set_menu_model(menu_button, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "app-menu")));
-	gtk_application_set_menubar(app, G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu")));
+	GMenuModel *app_menu = G_MENU_MODEL(gtk_builder_get_object(menubuilder, "app-menu"));
+	GMenuModel *file_menu = G_MENU_MODEL(gtk_builder_get_object(menubuilder, "prefs-editor-menu"));
+
+	gtk_menu_button_set_menu_model(menu_button, app_menu);
+	gtk_application_set_menubar(app, file_menu);
+	if (gtk_application_prefers_app_menu(app))
+		gtk_application_set_app_menu(app, app_menu);
+
 	g_object_unref(menubuilder);
 }
 
@@ -492,7 +499,7 @@ bool PrefsEditor(void)
 		return false;
 	}
 	builder = gtk_builder_new_from_resource(G_RES_PATH "prefs-editor.ui");
-	bool use_headerbar = false;
+	gboolean use_headerbar = false;
 	GtkSettings *settings = gtk_settings_get_default();
 	g_object_get(settings, "gtk-dialogs-use-header", &use_headerbar, NULL);
 	set_file_menu(GTK_APPLICATION(app));
@@ -547,6 +554,7 @@ bool PrefsEditor(void)
 	GtkWidget *jit = GTK_WIDGET(gtk_builder_get_object(builder, "jit"));
 	GtkWidget *keycodes = GTK_WIDGET(gtk_builder_get_object(builder, "keycodes"));
 	get_graphics_settings();
+	get_mouse_wheel_mode();
 	bind_sensitivity("mousewheelmode", "mousewheellines");
 	bind_sensitivity("keycodes", "keycodefile");
 	bind_sensitivity("keycodes", "keycodefile-browse");
@@ -1027,6 +1035,12 @@ void cb_check_box (GtkWidget *widget)
 	PrefsReplaceBool(gtk_widget_get_name(widget), gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
 }
 
+// Save the value of the check box as an int to its associated preference
+void cb_check_box_int (GtkWidget *widget)
+{
+	PrefsReplaceInt32(gtk_widget_get_name(widget), gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+}
+
 // Save the value of the check box (inverted) to its associated preference
 void cb_check_box_inv (GtkWidget *widget)
 {
@@ -1080,13 +1094,22 @@ void cb_swap_opt_cmd (GtkWidget *widget)
 
 } // extern "C"
 
+// Read and set mouse wheel mode preference
+static void get_mouse_wheel_mode (void)
+{
+	GtkToggleButton *page = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "mousewheelmode-inv"));
+	GtkToggleButton *cursor = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "mousewheelmode"));
+	gtk_toggle_button_set_active((PrefsFindInt32("mousewheelmode") ? cursor : page), true);
+}
+
 // Read and convert graphics preferences
 static void get_graphics_settings (void)
 {
 	display_type = DISPLAY_WINDOW;
 	dis_width = 640;
 	dis_height = 480;
-	screen_mode = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "screen-mode-full"));
+	screen_full = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "screen-mode-full"));
+	screen_win = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "screen-mode-window"));
 	screen_x = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-x"));
 	screen_y = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-y"));
 
@@ -1144,8 +1167,7 @@ static void get_graphics_settings (void)
 		dis_width = 0;
 	if (dis_height == screen_height)
 		dis_height = 0;
-
-	gtk_toggle_button_set_active(screen_mode, (display_type == DISPLAY_SCREEN));
+	gtk_toggle_button_set_active ((display_type ? screen_full : screen_win), true);
 	g_autofree gchar *width_str = g_strdup_printf("%d", dis_width);
 	if (!gtk_combo_box_set_active_id(screen_x, width_str))
 	{
@@ -1381,7 +1403,6 @@ int main (int argc, char *argv[])
 {
 	// Read preferences
 	PrefsInit(0, argc, argv);
-
 	// Show preferences editor
 	bool start = PrefsEditor();
 
