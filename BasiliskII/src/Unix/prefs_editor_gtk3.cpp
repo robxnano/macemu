@@ -44,6 +44,9 @@
 #define DEBUG 0
 #include "debug.h"
 
+#if GTK_CHECK_VERSION(3,20,0)
+#define USE_NATIVE_FILE_CHOOSER 1
+#endif
 
 // Global variables
 static GtkBuilder *builder;
@@ -51,6 +54,7 @@ static GtkWidget *win;				// Preferences window
 static bool start_clicked = false;	// Return value of PrefsEditor() function
 static int screen_width, screen_height; // Screen dimensions
 
+static GtkAdjustment *size_adj;
 
 static GtkToggleButton *screen_full;
 static GtkToggleButton *screen_win;
@@ -207,8 +211,62 @@ static void set_initial_prefs(void)
 	}
 }
 
+
+
+// Helper functions to create a file chooser
+static GtkFileChooser *file_chooser_new (GtkWidget *parent,
+                                         GtkFileChooserAction action,
+                                         uint32 title_id,
+                                         uint32 accept_id,
+                                         uint32 cancel_id,
+                                         const char *directory)
+{
+#ifdef USE_NATIVE_FILE_CHOOSER
+	GtkFileChooserNative *chooser = gtk_file_chooser_native_new(GetString(title_id),
+	                                                            GTK_WINDOW(parent),
+	                                                            action,
+	                                                            GetString(accept_id),
+	                                                            GetString(cancel_id));
+	gtk_native_dialog_set_transient_for(GTK_NATIVE_DIALOG(chooser), GTK_WINDOW(parent));
+	gtk_native_dialog_set_modal(GTK_NATIVE_DIALOG(chooser), true);
+#else
+    GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(title_id),
+	                                                 GTK_WINDOW(parent),
+	                                                 action,
+	                                                 GetString(cancel_id), GTK_RESPONSE_CANCEL,
+	                                                 GetString(accept_id), GTK_RESPONSE_ACCEPT,
+	                                                 NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
+	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
+	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+#endif
+    if (directory)
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), g_path_get_dirname(directory));
+	return GTK_FILE_CHOOSER(chooser);
+}
+
+static void file_chooser_show(GtkFileChooser *chooser)
+{
+#ifdef USE_NATIVE_FILE_CHOOSER
+    gtk_native_dialog_show(GTK_NATIVE_DIALOG(chooser));
+#else
+    gtk_widget_show(GTK_WIDGET(chooser));
+#endif
+}
+
+static void file_chooser_destroy(GtkFileChooser *chooser)
+{
+#ifdef USE_NATIVE_FILE_CHOOSER
+    gtk_native_dialog_destroy(GTK_NATIVE_DIALOG(chooser));
+#else
+    gtk_widget_destroy(GTK_WIDGET(chooser));
+#endif
+	g_object_unref(G_OBJECT(chooser));
+}
+
+
 // User closed the file chooser dialog, possibly selecting a file
-static void cb_browse_response(GtkWidget *chooser, int response, GtkEntry *entry)
+static void cb_browse_response(GtkFileChooser *chooser, int response, GtkEntry *entry)
 {
 	if (response == GTK_RESPONSE_ACCEPT)
 	{
@@ -217,7 +275,7 @@ static void cb_browse_response(GtkWidget *chooser, int response, GtkEntry *entry
 		gtk_entry_set_text(GTK_ENTRY(entry), filename);
 		g_free (filename);
 	}
-	gtk_widget_destroy (chooser);
+	file_chooser_destroy (chooser);
 }
 
 extern "C" {
@@ -225,36 +283,27 @@ extern "C" {
 // Open the file chooser dialog to select a file
 void cb_browse(GtkWidget *button, GtkWidget *entry)
 {
-	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_BROWSE_TITLE),
-							GTK_WINDOW(win),
-							GTK_FILE_CHOOSER_ACTION_OPEN,
-							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
-							GetString(STR_SELECT_BUTTON), GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser),
-	                                    g_path_get_dirname(gtk_entry_get_text(GTK_ENTRY(entry))));
-	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
-	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+	GtkFileChooser *chooser = file_chooser_new(win,
+					                           GTK_FILE_CHOOSER_ACTION_OPEN,
+					                           STR_BROWSE_TITLE,
+					                           STR_SELECT_BUTTON,
+					                           STR_CANCEL_BUTTON,
+					                           gtk_entry_get_text(GTK_ENTRY(entry)));
 	g_signal_connect(chooser, "response", G_CALLBACK(cb_browse_response), GTK_ENTRY(entry));
-	gtk_widget_show(chooser);
+	file_chooser_show(chooser);
 }
 
 // Open the file chooser dialog to select a folder
 void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 {
-	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_BROWSE_FOLDER_TITLE),
-							GTK_WINDOW(win),
-							GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
-							GetString(STR_SELECT_BUTTON), GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), gtk_entry_get_text(GTK_ENTRY(entry)));
-	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
-	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+    GtkFileChooser *chooser = file_chooser_new(win,
+							                   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+							                   STR_BROWSE_FOLDER_TITLE,
+							                   STR_SELECT_BUTTON,
+							                   STR_CANCEL_BUTTON,
+							                   gtk_entry_get_text(GTK_ENTRY(entry)));
 	g_signal_connect(chooser, "response", G_CALLBACK(cb_browse_response), GTK_WIDGET(entry));
-	gtk_widget_show(chooser);
+	file_chooser_show(chooser);
 }
 
 // User changed one of the screen mode settings
@@ -639,14 +688,14 @@ static const char* get_file_size (GFile *file)
 static bool has_file_ext (GFile *file, const char *ext)
 {
 	char *str = g_file_get_path(file);
-	char *file_ext = strrchr(str, '.');
-	if (file_ext == NULL)
+	char *file_ext = g_utf8_strrchr(str, 255, '.');
+	if (!file_ext)
 		return 0;
-	return (strncmp(file_ext, ext, 3) == 0);
+	return (g_strcmp0(file_ext, ext) == 0);
 }
 
 // User selected a volume to add
-static void cb_add_volume_response (GtkWidget *chooser, int response)
+static void cb_add_volume_response (GtkFileChooser *chooser, int response)
 {
 	if (response == GTK_RESPONSE_ACCEPT)
 	{
@@ -659,76 +708,116 @@ static void cb_add_volume_response (GtkWidget *chooser, int response)
 				-1);
 		g_object_unref(volume);
 	}
-	gtk_widget_destroy(chooser);
+	file_chooser_destroy(chooser);
 }
 
 // "Add Volume" button clicked
 static void cb_add_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_ADD_VOLUME_TITLE),
-							GTK_WINDOW(win),
-							GTK_FILE_CHOOSER_ACTION_OPEN,
-							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
-							GetString(STR_SELECT_BUTTON), GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+	GtkFileChooser *chooser = file_chooser_new(win,
+	                                           GTK_FILE_CHOOSER_ACTION_OPEN,
+	                                           STR_ADD_VOLUME_TITLE,
+	                                           STR_SELECT_BUTTON,
+	                                           STR_CANCEL_BUTTON,
+	                                           NULL);
 	g_signal_connect(chooser, "response", G_CALLBACK(cb_add_volume_response), NULL);
-	gtk_widget_show(chooser);
+	file_chooser_show(chooser);
+}
+
+static gboolean volume_file_create (GFile *file, guint32 size_mb)
+{
+	// The dialog asks to confirm overwrite, so no need to prevent overwriting if file already exists
+	GFileOutputStream *fd = g_file_replace(file, NULL, false, G_FILE_CREATE_REPLACE_DESTINATION, NULL, NULL);
+	if (fd != NULL && g_seekable_can_truncate(G_SEEKABLE(fd)))
+	{
+		g_seekable_truncate(G_SEEKABLE(fd), size_mb * 1024 * 1024, NULL, NULL);
+	}
+	else return false;
+	g_object_unref(fd);
+
+	gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
+	gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
+			COLUMN_PATH, g_file_get_path(file),
+			COLUMN_SIZE, get_file_size(file),
+			-1);
+	g_object_unref(file);
+	return true;
+}
+
+static void cb_volume_create_size (GtkWidget *dialog, int response, GFile *file)
+{
+	if (response == GTK_RESPONSE_OK)
+	{
+		volume_file_create(file, gtk_adjustment_get_value(size_adj));
+	}
+	gtk_widget_destroy(dialog);
 }
 
 // User selected to create a new volume
-static void cb_create_volume_response (GtkWidget *chooser, int response, GtkEntry *size_entry)
+static void cb_create_volume_response (GtkFileChooser *chooser, int response, GtkEntry *size_entry)
 {
+	GtkWidget *dialog, *spinbutton, *box;
 	if (response == GTK_RESPONSE_ACCEPT)
 	{
-		GFile *volume = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(chooser));
+		GFile *volume = gtk_file_chooser_get_file(chooser);
 		const gchar *str = gtk_entry_get_text(GTK_ENTRY(size_entry));
-		int disk_size = atoi(str);
+		gboolean chooser_is_widget = (strlen(str) >= 1);
+
+		guint32 disk_size = atoi(str);
+		if (!chooser_is_widget)
+		{
+			dialog = gtk_message_dialog_new(GTK_WINDOW(win),
+					(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+					GTK_MESSAGE_WARNING,
+					GTK_BUTTONS_OK_CANCEL,
+					"Volume Size (MB):", NULL);
+			box = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
+			size_adj = gtk_adjustment_new(atoi(VOLUME_SIZE_DEFAULT), 1, 2000, 1, 100, 100);
+			spinbutton = gtk_spin_button_new(size_adj, 10, 0);
+			gtk_box_pack_end(GTK_BOX(box), spinbutton, FALSE, FALSE, 0);
+			gtk_widget_show(box);
+			gtk_widget_show(spinbutton);
+			gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(win));
+			g_signal_connect(dialog, "response", G_CALLBACK(cb_volume_create_size), volume);
+			gtk_widget_show(dialog);
+			file_chooser_destroy(chooser);
+			return;
+		}
 		if (disk_size < 1 || disk_size > 2000)
 		{
 			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win),
-							(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
-							GTK_MESSAGE_WARNING,
-							GTK_BUTTONS_CLOSE,
-							"Enter a valid size", NULL);
+					(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+					GTK_MESSAGE_WARNING,
+					GTK_BUTTONS_CLOSE,
+					"Enter a valid size", NULL);
 			gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "The volume size should be between 1 and 2000.");
 			gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(chooser));
 			g_signal_connect(dialog, "response", G_CALLBACK(dl_quit), NULL);
 			gtk_widget_show(dialog);
 			return; // Don't close the file chooser dialog
 		}
-		// The dialog asks to confirm overwrite, so no need to prevent overwriting if file already exists
-		GFileOutputStream *fd = g_file_replace(volume, NULL, false, G_FILE_CREATE_REPLACE_DESTINATION, NULL, NULL);
-		if (fd != NULL && g_seekable_can_truncate(G_SEEKABLE(fd)))
-		{
-			g_seekable_truncate(G_SEEKABLE(fd), disk_size * 1024 * 1024, NULL, NULL);
-		}
-		g_object_unref(fd);
-
-		gtk_list_store_append (GTK_LIST_STORE(volume_store), &toplevel);
-		gtk_list_store_set (GTK_LIST_STORE(volume_store), &toplevel,
-				COLUMN_PATH, g_file_get_path(volume),
-				COLUMN_SIZE, get_file_size(volume),
-				-1);
-		g_object_unref(volume);
+		volume_file_create(volume, disk_size);
 	}
-	gtk_widget_destroy (chooser);
+	file_chooser_destroy (chooser);
+}
+
+// Doesn't run if the file chooser is displayed by the portal. We use this
+// to find out if we need to use a dialog to ask the user to enter a size
+static void size_entry_displayed(GtkWidget *size_entry, gpointer user_data)
+{
+	gtk_entry_set_text(GTK_ENTRY(size_entry), VOLUME_SIZE_DEFAULT);
 }
 
 // "Create" button clicked
 static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
-	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(STR_CREATE_VOLUME_TITLE),
-							GTK_WINDOW(win),
-							GTK_FILE_CHOOSER_ACTION_SAVE,
-							GetString(STR_CANCEL_BUTTON), GTK_RESPONSE_CANCEL,
-							GetString(STR_CREATE_BUTTON), GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(chooser), TRUE);
-	gtk_dialog_set_default_response(GTK_DIALOG(chooser), GTK_RESPONSE_ACCEPT);
-	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
-	gtk_window_set_modal(GTK_WINDOW(chooser), true);
+	GtkFileChooser *chooser = file_chooser_new(win,
+	                                           GTK_FILE_CHOOSER_ACTION_SAVE,
+	                                           STR_CREATE_VOLUME_TITLE,
+	                                           STR_CREATE_BUTTON,
+	                                           STR_CANCEL_BUTTON,
+	                                           NULL);
+	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
 
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	gtk_widget_show(box);
@@ -737,15 +826,15 @@ static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpoint
 	GtkWidget *size_entry = gtk_entry_new();
 	gtk_widget_show(size_entry);
 	gtk_entry_set_activates_default(GTK_ENTRY(size_entry), true);
-	gtk_entry_set_text(GTK_ENTRY(size_entry), VOLUME_SIZE_DEFAULT);
 	gtk_box_pack_end(GTK_BOX(box), size_entry, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(box), label, FALSE, FALSE, 0);
 	gtk_widget_set_hexpand(box, TRUE);
 
 	gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(chooser), box);
+	g_signal_connect(size_entry, "map", G_CALLBACK(size_entry_displayed), NULL);
 
 	g_signal_connect(chooser, "response", G_CALLBACK(cb_create_volume_response), size_entry);
-	gtk_widget_show(chooser);
+	file_chooser_show(chooser);
 }
 
 // Enables and disables the "Remove" button depending on whether a volume is selected
