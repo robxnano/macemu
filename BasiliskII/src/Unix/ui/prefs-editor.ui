@@ -459,7 +459,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">1</property>
+                        <property name="top-attach">2</property>
                       </packing>
                     </child>
                     <child>
@@ -497,21 +497,23 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkComboBoxText" id="screen-x">
-                        <property name="name">screen-width-combo</property>
+                      <object class="GtkComboBoxText" id="screen-res">
+                        <property name="name">screen-res</property>
                         <property name="width-request">200</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="active">3</property>
                         <property name="has-entry">True</property>
                         <items>
-                          <item id="512" translatable="yes">512</item>
-                          <item id="640" translatable="yes">640</item>
-                          <item id="800" translatable="yes">800</item>
-                          <item id="1024" translatable="yes">1024</item>
-                          <item id="1280" translatable="yes">1280</item>
-                          <item id="1600" translatable="yes">1600</item>
-                          <item id="0" translatable="yes">Maximum</item>
+                          <item id="512 x 384" translatable="yes">512 x 384</item>
+                          <item id="640 x 480" translatable="yes">640 x 480</item>
+                          <item id="800 x 600" translatable="yes">800 x 600</item>
+                          <item id="1024 x 768" translatable="yes">1024 x 768</item>
+                          <item id="1280 x 800" translatable="yes">1280 x 800</item>
+                          <item id="1440 x 900" translatable="yes">1440 x 900</item>
+                          <item id="1600 x 1200" translatable="yes">1600 x 1200</item>
+                          <item id="1920 x 1080" translatable="yes">1920 x 1080</item>
+                          <item id="0 x 0" translatable="yes">Maximum</item>
                         </items>
                         <signal name="changed" handler="cb_screen_mode" swapped="no"/>
                         <child internal-child="entry">
@@ -522,18 +524,18 @@
                       </object>
                       <packing>
                         <property name="left-attach">1</property>
-                        <property name="top-attach">3</property>
+                        <property name="top-attach">4</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Width:</property>
+                        <property name="label" translatable="yes">Resolution:</property>
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">3</property>
+                        <property name="top-attach">4</property>
                       </packing>
                     </child>
                     <child>
@@ -551,44 +553,6 @@
                         <property name="left-attach">0</property>
                         <property name="top-attach">6</property>
                         <property name="width">2</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Height:</property>
-                      </object>
-                      <packing>
-                        <property name="left-attach">0</property>
-                        <property name="top-attach">4</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkComboBoxText" id="screen-y">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="active">3</property>
-                        <property name="has-entry">True</property>
-                        <items>
-                          <item id="384" translatable="yes">384</item>
-                          <item id="480" translatable="yes">480</item>
-                          <item id="600" translatable="yes">600</item>
-                          <item id="768" translatable="yes">768</item>
-                          <item id="960" translatable="yes">960</item>
-                          <item id="1200" translatable="yes">1200</item>
-                          <item id="0" translatable="yes">Maximum</item>
-                        </items>
-                        <signal name="changed" handler="cb_screen_mode" swapped="no"/>
-                        <child internal-child="entry">
-                          <object class="GtkEntry">
-                            <property name="can-focus">True</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="left-attach">1</property>
-                        <property name="top-attach">4</property>
                       </packing>
                     </child>
                     <child>
@@ -634,7 +598,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">1</property>
-                        <property name="top-attach">1</property>
+                        <property name="top-attach">2</property>
                         <property name="height">2</property>
                       </packing>
                     </child>
@@ -645,7 +609,7 @@
                       </object>
                       <packing>
                         <property name="left-attach">0</property>
-                        <property name="top-attach">2</property>
+                        <property name="top-attach">3</property>
                       </packing>
                     </child>
                     <child>
@@ -666,6 +630,22 @@
                         <property name="width">2</property>
                       </packing>
                     </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="label" translatable="yes">Video</property>
+                        <attributes>
+                          <attribute name="weight" value="bold"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">1</property>
+                        <property name="width">2</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -674,11 +654,14 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkSeparator">
+                  <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Audio</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -763,7 +746,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="position">2</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
               </object>
@@ -774,7 +757,7 @@
               </packing>
             </child>
             <child>
-              <!-- n-columns=2 n-rows=6 -->
+              <!-- n-columns=2 n-rows=7 -->
               <object class="GtkGrid" id="keyboard-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -824,18 +807,18 @@
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">0</property>
+                    <property name="top-attach">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Mouse wheel function:</property>
+                    <property name="label" translatable="yes">Mouse wheel:</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">4</property>
+                    <property name="top-attach">5</property>
                   </packing>
                 </child>
                 <child>
@@ -848,7 +831,7 @@ See Help &gt; Keyboard Shortcuts for a full list.</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">2</property>
+                    <property name="top-attach">3</property>
                   </packing>
                 </child>
                 <child>
@@ -909,20 +892,7 @@ See Help &gt; Keyboard Shortcuts for a full list.</property>
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkSeparator">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
                     <property name="top-attach">3</property>
-                    <property name="width">2</property>
                   </packing>
                 </child>
                 <child>
@@ -1033,7 +1003,7 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">1</property>
+                    <property name="top-attach">2</property>
                     <property name="width">2</property>
                   </packing>
                 </child>
@@ -1123,7 +1093,7 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">4</property>
+                    <property name="top-attach">5</property>
                     <property name="height">2</property>
                   </packing>
                 </child>
@@ -1134,7 +1104,7 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">5</property>
+                    <property name="top-attach">6</property>
                   </packing>
                 </child>
                 <child>
@@ -1150,7 +1120,39 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Keyboard</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
                     <property name="top-attach">0</property>
+                    <property name="width">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Mouse</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">4</property>
+                    <property name="width">2</property>
                   </packing>
                 </child>
               </object>
@@ -1676,6 +1678,9 @@ for most non-Apple keyboards</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">SCSI Ports</property>
+                        <attributes>
+                          <attribute name="weight" value="bold"/>
+                        </attributes>
                       </object>
                     </child>
                   </object>
@@ -1693,7 +1698,7 @@ for most non-Apple keyboards</property>
               </packing>
             </child>
             <child>
-              <!-- n-columns=3 n-rows=13 -->
+              <!-- n-columns=3 n-rows=6 -->
               <object class="GtkGrid" id="system-pane">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -1908,6 +1913,32 @@ for most non-Apple keyboards</property>
                   </packing>
                 </child>
                 <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="name">system-pane</property>
+                <property name="title" translatable="yes">Emulation</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
+              <!-- n-columns=3 n-rows=6 -->
+              <object class="GtkGrid" id="jit-pane">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="margin-left">10</property>
+                <property name="margin-right">10</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
+                <property name="row-spacing">6</property>
+                <property name="column-spacing">10</property>
+                <child>
                   <object class="GtkCheckButton" id="jit">
                     <property name="label" translatable="yes">Enable JIT compiler</property>
                     <property name="name">jit</property>
@@ -1916,11 +1947,10 @@ for most non-Apple keyboards</property>
                     <property name="receives-default">False</property>
                     <property name="halign">start</property>
                     <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">7</property>
+                    <property name="top-attach">0</property>
                     <property name="width">3</property>
                   </packing>
                 </child>
@@ -1933,11 +1963,10 @@ for most non-Apple keyboards</property>
                     <property name="receives-default">False</property>
                     <property name="halign">start</property>
                     <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" object="jit" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">8</property>
+                    <property name="top-attach">1</property>
                     <property name="width">3</property>
                   </packing>
                 </child>
@@ -1950,11 +1979,10 @@ for most non-Apple keyboards</property>
                     <property name="receives-default">False</property>
                     <property name="halign">start</property>
                     <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">9</property>
+                    <property name="top-attach">2</property>
                     <property name="width">3</property>
                   </packing>
                 </child>
@@ -1967,11 +1995,10 @@ for most non-Apple keyboards</property>
                     <property name="receives-default">False</property>
                     <property name="halign">start</property>
                     <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">10</property>
+                    <property name="top-attach">3</property>
                     <property name="width">3</property>
                   </packing>
                 </child>
@@ -1984,11 +2011,10 @@ for most non-Apple keyboards</property>
                     <property name="receives-default">False</property>
                     <property name="halign">start</property>
                     <property name="draw-indicator">True</property>
-                    <signal name="toggled" handler="cb_check_box" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">11</property>
+                    <property name="top-attach">4</property>
                     <property name="width">3</property>
                   </packing>
                 </child>
@@ -2000,7 +2026,7 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">12</property>
+                    <property name="top-attach">5</property>
                   </packing>
                 </child>
                 <child>
@@ -2016,7 +2042,6 @@ for most non-Apple keyboards</property>
                       <item id="8" translatable="yes">8 MB</item>
                       <item id="16" translatable="yes">16 MB</item>
                     </items>
-                    <signal name="changed" handler="cb_jitcachesize" swapped="no"/>
                     <child internal-child="entry">
                       <object class="GtkEntry">
                         <property name="can-focus">False</property>
@@ -2025,36 +2050,17 @@ for most non-Apple keyboards</property>
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">12</property>
+                    <property name="top-attach">5</property>
                   </packing>
-                </child>
-                <child>
-                  <object class="GtkSeparator">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">6</property>
-                    <property name="width">3</property>
-                  </packing>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
                 </child>
                 <child>
                   <placeholder/>
                 </child>
               </object>
               <packing>
-                <property name="name">system-pane</property>
-                <property name="title" translatable="yes">Emulation</property>
-                <property name="position">4</property>
+                <property name="name">page0</property>
+                <property name="title" translatable="yes">JIT</property>
+                <property name="position">5</property>
               </packing>
             </child>
           </object>

@@ -58,14 +58,16 @@ static GtkAdjustment *size_adj;
 
 static GtkToggleButton *screen_full;
 static GtkToggleButton *screen_win;
-static GtkComboBox *screen_x;
-static GtkComboBox *screen_y;
+static GtkComboBox *screen_res;
 
 static GtkWidget *volumes_view;
 static GtkTreeModel *volume_store;
 static GtkTreeIter toplevel;
 static GtkTreeSelection *selection;
 
+static int display_type;
+static int dis_width, dis_height;
+static bool is_fbdev_dga_mode = false;
 
 struct opt_desc {
 	int label_id;
@@ -230,7 +232,7 @@ static GtkFileChooser *file_chooser_new (GtkWidget *parent,
 	gtk_native_dialog_set_transient_for(GTK_NATIVE_DIALOG(chooser), GTK_WINDOW(parent));
 	gtk_native_dialog_set_modal(GTK_NATIVE_DIALOG(chooser), true);
 #else
-    GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(title_id),
+	GtkWidget *chooser = gtk_file_chooser_dialog_new(GetString(title_id),
 	                                                 GTK_WINDOW(parent),
 	                                                 action,
 	                                                 GetString(cancel_id), GTK_RESPONSE_CANCEL,
@@ -240,7 +242,7 @@ static GtkFileChooser *file_chooser_new (GtkWidget *parent,
 	gtk_window_set_transient_for(GTK_WINDOW(chooser), GTK_WINDOW(win));
 	gtk_window_set_modal(GTK_WINDOW(chooser), true);
 #endif
-    if (directory)
+	if (directory)
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), g_path_get_dirname(directory));
 	return GTK_FILE_CHOOSER(chooser);
 }
@@ -248,18 +250,18 @@ static GtkFileChooser *file_chooser_new (GtkWidget *parent,
 static void file_chooser_show(GtkFileChooser *chooser)
 {
 #ifdef USE_NATIVE_FILE_CHOOSER
-    gtk_native_dialog_show(GTK_NATIVE_DIALOG(chooser));
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(chooser));
 #else
-    gtk_widget_show(GTK_WIDGET(chooser));
+	gtk_widget_show(GTK_WIDGET(chooser));
 #endif
 }
 
 static void file_chooser_destroy(GtkFileChooser *chooser)
 {
 #ifdef USE_NATIVE_FILE_CHOOSER
-    gtk_native_dialog_destroy(GTK_NATIVE_DIALOG(chooser));
+	gtk_native_dialog_destroy(GTK_NATIVE_DIALOG(chooser));
 #else
-    gtk_widget_destroy(GTK_WIDGET(chooser));
+	gtk_widget_destroy(GTK_WIDGET(chooser));
 #endif
 	g_object_unref(G_OBJECT(chooser));
 }
@@ -284,11 +286,11 @@ extern "C" {
 void cb_browse(GtkWidget *button, GtkWidget *entry)
 {
 	GtkFileChooser *chooser = file_chooser_new(win,
-					                           GTK_FILE_CHOOSER_ACTION_OPEN,
-					                           STR_BROWSE_TITLE,
-					                           STR_SELECT_BUTTON,
-					                           STR_CANCEL_BUTTON,
-					                           gtk_entry_get_text(GTK_ENTRY(entry)));
+	                                           GTK_FILE_CHOOSER_ACTION_OPEN,
+	                                           STR_BROWSE_TITLE,
+	                                           STR_SELECT_BUTTON,
+	                                           STR_CANCEL_BUTTON,
+	                                           gtk_entry_get_text(GTK_ENTRY(entry)));
 	g_signal_connect(chooser, "response", G_CALLBACK(cb_browse_response), GTK_ENTRY(entry));
 	file_chooser_show(chooser);
 }
@@ -296,12 +298,12 @@ void cb_browse(GtkWidget *button, GtkWidget *entry)
 // Open the file chooser dialog to select a folder
 void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 {
-    GtkFileChooser *chooser = file_chooser_new(win,
-							                   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-							                   STR_BROWSE_FOLDER_TITLE,
-							                   STR_SELECT_BUTTON,
-							                   STR_CANCEL_BUTTON,
-							                   gtk_entry_get_text(GTK_ENTRY(entry)));
+	GtkFileChooser *chooser = file_chooser_new(win,
+	                                           GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+	                                           STR_BROWSE_FOLDER_TITLE,
+	                                           STR_SELECT_BUTTON,
+	                                           STR_CANCEL_BUTTON,
+	                                           gtk_entry_get_text(GTK_ENTRY(entry)));
 	g_signal_connect(chooser, "response", G_CALLBACK(cb_browse_response), GTK_WIDGET(entry));
 	file_chooser_show(chooser);
 }
@@ -309,20 +311,24 @@ void cb_browse_dir(GtkWidget *button, GtkWidget *entry)
 // User changed one of the screen mode settings
 void cb_screen_mode(GtkWidget *widget)
 {
-	const char *str_x = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_x));
-	int int_x = atoi(str_x);
-	if (int_x < 0) int_x = 0;
-
-	const char *str_y = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_y));
-	int int_y = atoi(str_y);
-	if (int_y < 0) int_y = 0;
+	const char *res = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(screen_res));
+	if (res)
+	{
+		if (g_strcmp0(res, GetString(STR_SIZE_MAX_LAB)) == 0)
+		{
+			dis_width = 0;
+			dis_height = 0;
+		}
+		else
+			sscanf(res, "%d x %d", &dis_width, &dis_height);
+	}
 
 #ifdef ENABLE_FBDEV_DGA
 	const char *str = gtk_toggle_button_get_active(screen_full) ? "fbdev/%d/%d" : "win/%d/%d";
 #else
 	const char *str = gtk_toggle_button_get_active(screen_full) ? "dga/%d/%d" : "win/%d/%d";
 #endif
-	g_autofree gchar *screen = g_strdup_printf(str, int_x, int_y);
+	g_autofree gchar *screen = g_strdup_printf(str, dis_width, dis_height);
 	PrefsReplaceString("screen", screen);
 	// Old prefs are now migrated
 	PrefsRemoveItem("windowmodes");
@@ -529,7 +535,7 @@ static void set_help_overlay (GtkApplicationWindow *win)
 #if GTK_CHECK_VERSION(3,20,0)
 	GtkBuilder *helpbuilder = gtk_builder_new_from_resource(G_RES_PATH "help-overlay.ui");
 	gtk_application_window_set_help_overlay(win,
-	                                        GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
+			GTK_SHORTCUTS_WINDOW(gtk_builder_get_object(helpbuilder, "emulator-shortcuts")));
 	g_object_unref(helpbuilder);
 #endif
 }
@@ -576,8 +582,9 @@ bool PrefsEditor(void)
 
 	gtk_window_set_title(GTK_WINDOW(win), GetString(STR_PREFS_TITLE));
 	g_action_map_add_action_entries (G_ACTION_MAP (win),
-					 win_entries, G_N_ELEMENTS (win_entries),
-					 win);
+	                                 win_entries,
+	                                 G_N_ELEMENTS (win_entries),
+	                                 win);
 	g_simple_action_set_enabled(G_SIMPLE_ACTION(g_action_map_lookup_action(G_ACTION_MAP (win), "remove-volume")), false);
 	g_signal_connect(GTK_WIDGET(win), "delete_event", G_CALLBACK(window_closed), NULL);
 	g_signal_connect(GTK_WIDGET(win), "destroy", G_CALLBACK(window_destroyed), NULL);
@@ -632,12 +639,6 @@ bool PrefsEditor(void)
 	bind_sensitivity("jit", "jitcachesize-label");
 	bind_sensitivity("jit", "jitinline");
 	bind_sensitivity("udptunnel", "ether", G_BINDING_INVERT_BOOLEAN);
-#endif
-#ifndef ENABLE_SDL_AUDIO
-	hide_widget("dsp");
-	hide_widget("mixer");
-	hide_widget("dsp-label");
-	hide_widget("mixer-label");
 #endif
 	if (!is_jit_capable())
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "jit-pane")), false);
@@ -1010,10 +1011,6 @@ enum {
 	DISPLAY_SCREEN
 };
 
-static int display_type;
-static int dis_width, dis_height;
-static bool is_fbdev_dga_mode = false;
-
 extern "C" {
 
 // User changed the hotkey combination
@@ -1199,8 +1196,7 @@ static void get_graphics_settings (void)
 	dis_height = 480;
 	screen_full = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "screen-mode-full"));
 	screen_win = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "screen-mode-window"));
-	screen_x = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-x"));
-	screen_y = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-y"));
+	screen_res = GTK_COMBO_BOX(gtk_builder_get_object(builder, "screen-res"));
 
 	const char *str = PrefsFindString("screen");
 	if (str) {
@@ -1257,17 +1253,11 @@ static void get_graphics_settings (void)
 	if (dis_height == screen_height)
 		dis_height = 0;
 	gtk_toggle_button_set_active ((display_type ? screen_full : screen_win), true);
-	g_autofree gchar *width_str = g_strdup_printf("%d", dis_width);
-	if (!gtk_combo_box_set_active_id(screen_x, width_str))
+	g_autofree gchar *res_str = g_strdup_printf("%d x %d", dis_width, dis_height);
+	if (!gtk_combo_box_set_active_id(screen_res, res_str))
 	{
-		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(screen_x))), width_str);
+		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(screen_res))), res_str);
 	}
-	g_autofree gchar *height_str = g_strdup_printf("%d", dis_height);
-	if (!gtk_combo_box_set_active_id(screen_y, height_str))
-	{
-		gtk_entry_set_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(screen_y))), height_str);
-	}
-
 }
 
 // Add names of serial devices
