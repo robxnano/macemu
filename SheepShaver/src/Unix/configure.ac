@@ -91,10 +91,23 @@ AC_PROG_EGREP
 AC_PATH_PROGS(FILE, [file false])
 AC_PATH_PROG(PERL, [perl])
 
+dnl Check for PowerPC target CPU.
+HAVE_PPC=no
+AC_MSG_CHECKING(for PowerPC target CPU)
+case "$target_cpu" in
+  powerpc*)
+    HAVE_PPC=yes;;
+  ppc*)
+    HAVE_PPC=yes;;
+  *)
+    HAVE_PPC=no;;
+esac
+AC_MSG_RESULT([$HAVE_PPC])
+
 dnl We use native CPU if possible.
 EMULATED_PPC=yes
 case $WANT_EMULATED_PPC in
-  auto) [[ "$target_cpu" = "powerpc" ]] && EMULATED_PPC=no;;
+  auto) [[ "x$HAVE_PPC" = "xyes" ]] && EMULATED_PPC=no;;
   no)   EMULATED_PPC=no;;
 esac
 if [[ "x$EMULATED_PPC" = "xyes" ]]; then
