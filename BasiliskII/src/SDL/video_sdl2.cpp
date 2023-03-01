@@ -1237,12 +1237,24 @@ static void update_mouse_grab()
 	}
 }
 
+static void update_keyboard_grab(void)
+{
+#if defined(USE_SDL) && SDL_VERSION_ATLEAST(2,0,16)
+	if (mouse_grabbed) {
+		SDL_SetWindowKeyboardGrab(sdl_window, SDL_TRUE);
+	} else {
+		SDL_SetWindowKeyboardGrab(sdl_window, SDL_FALSE);
+#endif
+	}
+}
+
 // Grab mouse, switch to relative mouse mode
 void driver_base::grab_mouse(void)
 {
 	if (!mouse_grabbed) {
 		mouse_grabbed = true;
 		update_mouse_grab();
+		update_keyboard_grab();
 		set_window_name();
 		disable_mouse_accel();
 		ADBSetRelMouseMode(true);
@@ -1255,6 +1267,7 @@ void driver_base::ungrab_mouse(void)
 	if (mouse_grabbed) {
 		mouse_grabbed = false;
 		update_mouse_grab();
+		update_keyboard_grab();
 		set_window_name();
 		restore_mouse_accel();
 		ADBSetRelMouseMode(false);
