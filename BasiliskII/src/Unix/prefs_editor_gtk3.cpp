@@ -67,7 +67,9 @@ static GtkTreeSelection *selection;
 
 static int display_type;
 static int dis_width, dis_height;
+#ifdef ENABLE_FBDEV_DGA
 static bool is_fbdev_dga_mode = false;
+#endif
 
 struct opt_desc {
 	int label_id;
@@ -77,6 +79,17 @@ struct opt_desc {
 struct combo_desc {
 	int label_id;
 };
+
+static GtkWidget *create_tree_view (void);
+static void cb_add_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
+static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
+static void cb_remove_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
+static GList *add_serial_names(void);
+static GList *add_ether_names(void);
+static void save_volumes(void);
+static void get_graphics_settings(void);
+static void get_mouse_wheel_mode(void);
+static bool is_jit_capable(void);
 
 #ifdef SHEEPSHAVER
 #define VOLUME_SIZE_DEFAULT "256"
@@ -606,9 +619,6 @@ bool PrefsEditor(void)
 	GtkAccelGroup *accel_group = gtk_accel_group_new();
 	gtk_window_add_accel_group(GTK_WINDOW(win), accel_group);
 	volumes_view = create_tree_view();
-	GtkWidget *nosound = GTK_WIDGET(gtk_builder_get_object(builder, "nosound"));
-	GtkWidget *jit = GTK_WIDGET(gtk_builder_get_object(builder, "jit"));
-	GtkWidget *keycodes = GTK_WIDGET(gtk_builder_get_object(builder, "keycodes"));
 	get_graphics_settings();
 	get_mouse_wheel_mode();
 	bind_sensitivity("mousewheelmode", "mousewheellines");
@@ -862,7 +872,6 @@ static void cb_cdrom (GtkCellRendererToggle *cell, gchar *path_str, gpointer dat
 	GtkTreeIter iter;
 	GtkTreePath *path = gtk_tree_path_new_from_string (path_str);
 	gboolean cd_rom;
-	gboolean new_value = true;
 
 	gtk_tree_model_get_iter (volume_store, &iter, path);
 	gtk_tree_model_get (volume_store, &iter, COLUMN_CDROM, &cd_rom, -1);
@@ -876,7 +885,6 @@ static void cb_cdrom (GtkCellRendererToggle *cell, gchar *path_str, gpointer dat
 // Save volumes from list store to prefs
 static void save_volumes (void)
 {
-	GtkTreePath *path;
 	while (PrefsFindString("disk"))
 		PrefsRemoveItem("disk");
 	while (PrefsFindString("cdrom"))

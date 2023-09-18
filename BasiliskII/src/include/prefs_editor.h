@@ -36,17 +36,6 @@ extern bool PrefsEditor(void);
 #define GSimpleAction void
 #endif
 
-static GtkWidget *create_tree_view (void);
-static void cb_add_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
-static void cb_create_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
-static void cb_remove_volume (GSimpleAction *action, GVariant *parameter, gpointer user_data);
-static GList *add_serial_names(void);
-static GList *add_ether_names(void);
-static void save_volumes(void);
-static void get_graphics_settings(void);
-static void get_mouse_wheel_mode(void);
-static bool is_jit_capable(void);
-static void hide_widget(GtkWidget *widget);
 extern "C" {
 void dl_quit(GtkWidget *dialog);
 void cb_swap_opt_cmd (GtkWidget *widget);
