@@ -67,10 +67,10 @@ struct sigstate {
 # if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 #  include <X11/Xlib.h>
 # endif
-#endif
-
-#ifdef ENABLE_GTK3
-#include "color_scheme.h"
+# if GTK_CHECK_VERSION(3, 22, 0)
+#  define ENABLE_GTK3
+#  include "color_scheme.h"
+# endif
 #endif
 
 #ifdef ENABLE_XF86_DGA

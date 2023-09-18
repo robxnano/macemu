@@ -136,6 +136,10 @@
 #if !defined(GDK_WINDOWING_QUARTZ) && !defined(GDK_WINDOWING_WAYLAND)
 #include <X11/Xlib.h>
 #endif
+#if GTK_CHECK_VERSION(3, 22, 0)
+#define ENABLE_GTK3
+#include "color_scheme.h"
+#endif
 #endif
 
 #ifdef ENABLE_GTK3
@@ -1575,7 +1579,6 @@ static void *tick_func(void *arg)
 /*
  *  Pthread configuration
  */
-
 void Set_pthread_attr(pthread_attr_t *attr, int priority)
 {
 #ifdef HAVE_PTHREADS
