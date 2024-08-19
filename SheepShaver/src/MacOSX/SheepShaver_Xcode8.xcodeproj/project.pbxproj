@@ -146,7 +146,7 @@
 		08003F871E0624D100A3ADAB /* basic-dyngen-ops.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = "basic-dyngen-ops.hpp"; path = "dyngen_precompiled/basic-dyngen-ops.hpp"; sourceTree = "<group>"; };
 		08003F881E0624D100A3ADAB /* ppc-dyngen-ops-x86_32.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = "ppc-dyngen-ops-x86_32.hpp"; path = "dyngen_precompiled/ppc-dyngen-ops-x86_32.hpp"; sourceTree = "<group>"; };
 		08003F8A1E0624D100A3ADAB /* ppc-dyngen-ops.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = "ppc-dyngen-ops.hpp"; path = "dyngen_precompiled/ppc-dyngen-ops.hpp"; sourceTree = "<group>"; };
-		08003F8B1E0624D100A3ADAB /* ppc-execute-impl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "ppc-execute-impl.cpp"; path = "dyngen_precompiled/ppc-execute-impl.cpp"; sourceTree = "<group>"; };
+		08003F8B1E0624D100A3ADAB /* ppc-execute-impl.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "ppc-execute-impl.hpp"; path = "dyngen_precompiled/ppc-execute-impl.hpp"; sourceTree = "<group>"; };
 		08163337158C121000C449F9 /* dis-asm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "dis-asm.h"; sourceTree = "<group>"; };
 		08163338158C121000C449F9 /* ppc-dis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ppc-dis.c"; sourceTree = "<group>"; };
 		082AC22C14AA52E900071F5E /* prefs_editor_dummy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = prefs_editor_dummy.cpp; sourceTree = "<group>"; };
@@ -431,7 +431,7 @@
 				08003F881E0624D100A3ADAB /* ppc-dyngen-ops-x86_32.hpp */,
 				E4C9A03F1FD55CE700CABBF9 /* ppc-dyngen-ops-x86_64_macos.hpp */,
 				08003F8A1E0624D100A3ADAB /* ppc-dyngen-ops.hpp */,
-				08003F8B1E0624D100A3ADAB /* ppc-execute-impl.cpp */,
+				08003F8B1E0624D100A3ADAB /* ppc-execute-impl.hpp */,
 			);
 			name = dyngen_precompiled;
 			sourceTree = "<group>";

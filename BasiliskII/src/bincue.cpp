@@ -772,10 +772,11 @@ bool CDPlay_bincue(void *fh, uint8 start_m, uint8 start_s, uint8 start_f,
 		int track;
 		MSF msf;
 
-#if defined(USE_SDL_AUDIO) && !SDL_VERSION_ATLEAST(3, 0, 0)
+#if defined(USE_SDL_AUDIO)
+#if !SDL_VERSION_ATLEAST(3, 0, 0)
 		SDL_LockAudio();
 #endif
-
+#endif
 		player->audiostatus = CDROM_AUDIO_NO_STATUS;
 
 		player->audiostart = (start_m * 60 * CD_FRAMES) +
@@ -817,8 +818,10 @@ bool CDPlay_bincue(void *fh, uint8 start_m, uint8 start_s, uint8 start_f,
 		else
 			D(bug("CDPlay_bincue: play beyond last track !\n"));
 
-#if defined(USE_SDL_AUDIO) && !SDL_VERSION_ATLEAST(3, 0, 0)
+#if defined(USE_SDL_AUDIO)
+#if !SDL_VERSION_ATLEAST(3, 0, 0)
 		SDL_UnlockAudio();
+#endif
 #endif
 
 		if (player->audio_enabled) {

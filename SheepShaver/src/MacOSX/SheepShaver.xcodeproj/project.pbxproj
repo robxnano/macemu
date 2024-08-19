@@ -1320,11 +1320,11 @@
 			);
 			name = "Run genexec";
 			outputPaths = (
-				"$(SRCROOT)/../Unix/ppc-execute-impl.cpp",
+				"$(SRCROOT)/../Unix/ppc-execute-impl.hpp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "gcc -E \"-I${SRCROOT}/config\" \"-I${SRCROOT}/../include\" \"-I${SRCROOT}/../kpx_cpu/include\" \"-I${SRCROOT}/../kpx_cpu/src\" \"-I${SRCROOT}/../Unix\" -DUSE_JIT -DGENEXEC \"${SRCROOT}/../kpx_cpu/src/cpu/ppc/ppc-decode.cpp\" | perl \"${SRCROOT}/../kpx_cpu/src/cpu/ppc/genexec.pl\" > \"${SRCROOT}/../Unix/ppc-execute-impl.cpp\"\n";
+			shellScript = "gcc -E \"-I${SRCROOT}/config\" \"-I${SRCROOT}/../include\" \"-I${SRCROOT}/../kpx_cpu/include\" \"-I${SRCROOT}/../kpx_cpu/src\" \"-I${SRCROOT}/../Unix\" -DUSE_JIT -DGENEXEC \"${SRCROOT}/../kpx_cpu/src/cpu/ppc/ppc-decode.cpp\" | perl \"${SRCROOT}/../kpx_cpu/src/cpu/ppc/genexec.pl\" > \"${SRCROOT}/../Unix/ppc-execute-impl.hpp\"\n";
 		};
 		08CD3F3214B665E1009CA2A2 /* Preprocess Info.plist */ = {
 			isa = PBXShellScriptBuildPhase;

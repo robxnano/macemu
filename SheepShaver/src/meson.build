@@ -1,0 +1,256 @@
+configure_file(output: 'config.h', configuration: config_h)
+
+inc_dirs = ['include', 'kpx_cpu', 'kpx_cpu/include', 'kpx_cpu/src', 'Unix', 'CrossPlatform']
+
+src = [
+  'adb.cpp',
+  'audio.cpp',
+  'cdrom.cpp',
+  'disk.cpp',
+  'emul_op.cpp',
+  'ether.cpp',
+  'extfs.cpp',
+  'gfxaccel.cpp',
+  'macos_util.cpp',
+  'main.cpp',
+  'name_registry.cpp',
+  'prefs.cpp',
+  'prefs_items.cpp',
+  'rom_patches.cpp',
+  'rsrc_patches.cpp',
+  'scsi.cpp',
+  'serial.cpp',
+  'sony.cpp',
+  'thunks.cpp',
+  'timer.cpp',
+  'user_strings.cpp',
+  'video.cpp',
+  'xpram.cpp',
+  'CrossPlatform/sigsegv.cpp',
+  'CrossPlatform/video_blit.cpp',
+  'CrossPlatform/vm_alloc.cpp',
+  'dummy/prefs_dummy.cpp',
+]
+
+if host_system != 'windows'
+  src += [
+    'Unix/about_window_unix.cpp',
+    'Unix/disk_sparsebundle.cpp',
+    'Unix/ether_unix.cpp',
+    'Unix/extfs_unix.cpp',
+    'Unix/main_unix.cpp',
+    'Unix/prefs_unix.cpp',
+    'Unix/rpc_unix.cpp',
+    'Unix/serial_unix.cpp',
+    'Unix/sshpty.c',
+    'Unix/strlcpy.c',
+    'Unix/sys_unix.cpp',
+    'Unix/timer_unix.cpp',
+    'Unix/tinyxml2.cpp',
+    'Unix/user_strings_unix.cpp',
+    'Unix/xpram_unix.cpp',
+  ]
+  if host_system == 'linux'
+    src += 'Unix/Linux/scsi_linux.cpp'
+  else
+    src += 'dummy/scsi_dummy.cpp'
+  endif
+endif
+
+if use_gtk
+  if gtk.version().version_compare('>= 3.0')
+    gnome = import('gnome')
+    ui_xml = files(
+      'Unix/ui/help-overlay.ui',
+      'Unix/ui/menu.ui',
+      'Unix/ui/prefs-editor.ui',
+    )
+    ui = gnome.compile_resources('g_resource', 'Unix/ui/sheepshaver.gresource.xml',
+      c_name: 'sheepshaver',
+      source_dir: 'Unix',
+      dependencies: ui_xml)
+    src += [ui, 'Unix/prefs_editor_gtk3.cpp', 'Unix/color_scheme.cpp']
+  else
+    src += 'Unix/prefs_editor_gtk.cpp'
+  endif
+endif
+
+if get_option('slirp')
+  inc_dirs += 'slirp'
+  src += [
+    'slirp/bootp.c',
+    'slirp/ip_output.c',
+    'slirp/tcp_input.c',
+    'slirp/cksum.c',
+    'slirp/mbuf.c',
+    'slirp/tcp_output.c',
+    'slirp/debug.c',
+    'slirp/misc.c',
+    'slirp/tcp_subr.c',
+    'slirp/if.c',
+    'slirp/sbuf.c',
+    'slirp/tcp_timer.c',
+    'slirp/ip_icmp.c',
+    'slirp/slirp.c',
+    'slirp/tftp.c',
+    'slirp/ip_input.c',
+    'slirp/socket.c',
+    'slirp/udp.c',
+  ]
+endif
+
+if get_option('sdl') != 'disabled'
+  src += [
+    'SDL/video_sdl.cpp',
+    'SDL/video_sdl2.cpp',
+    'SDL/audio_sdl.cpp',
+    'dummy/clip_dummy.cpp',
+  ]
+  keycodes = 'SDL/keycodes'
+elif host_system == 'darwin'
+  src += [
+    #TODO: Finish this
+  ]
+  keycodes = 'MacOSX/keycodes'
+else # X11 on Unix
+  src += [
+    'Unix/video_x.cpp',
+    'Unix/clip_unix.cpp',
+    'dummy/audio_dummy.cpp',
+  ]
+  keycodes = 'Unix/keycodes'
+endif
+
+if not get_option('bincue').disabled()
+  src += 'bincue.cpp'
+endif
+
+if not host_machine.cpu_family().startswith('ppc')
+  if use_dyngen == 'precompiled'
+    if host_machine.cpu_family().startswith('x86')
+      add_project_arguments('-fomit-frame-pointer', language: ['c', 'cpp'])
+    endif
+    inc_dirs += 'Unix/dyngen_precompiled'
+    src += [
+      'kpx_cpu/src/cpu/jit/jit-cache.cpp',
+      'kpx_cpu/src/cpu/jit/basic-dyngen.cpp',
+      'kpx_cpu/src/cpu/ppc/ppc-dyngen.cpp',
+      'kpx_cpu/src/cpu/ppc/ppc-jit.cpp',
+    ]
+  elif use_dyngen == 'enabled'
+    dyngen_args = [
+
+    ]
+    dyngen_src = ['kpx_cpu/src/cpu/jit/dyngen.c', 'kpx_cpu/src/cpu/jit/cxxdemangle.cpp']
+    dyngen = executable('dyngen', dyngen_src,
+      include_directories: inc_dirs,
+      c_args: dyngen_args,
+      cpp_args: dyngen_args,
+    )
+
+    dyngen_cpp_args = [
+      '-fomit-frame-pointer',
+      '-fno-align-functions',
+      '-fno-stack-protector',
+      '-finline-functions',
+      '-finline-limit=10000',
+      '-fno-exceptions',
+      '-g0',
+      '-fno-reorder-blocks',
+      '-fno-optimize-sibling-calls',
+      '-fno-reorder-blocks-and-partition',
+    ]
+
+    basic_dyngen_ops_a = static_library('basic-dyngen-ops',
+      'kpx_cpu/src/cpu/jit/basic-dyngen-ops.cpp',
+      cpp_args: dyngen_cpp_args,
+      include_directories: inc_dirs,
+      pic: false)
+
+    basic_dyngen_ops_o = basic_dyngen_ops_a.extract_objects('kpx_cpu/src/cpu/jit/basic-dyngen-ops.cpp')
+
+    basic_dyngen_ops = custom_target('basic-dyngen-ops',
+      command: [dyngen, '-o', '@OUTPUT@', '@INPUT@'],
+      input: basic_dyngen_ops_o,
+      output: 'basic-dyngen-ops.hpp',
+    )
+
+    ppc_dyngen_ops_a = static_library('ppc-dyngen-ops', basic_dyngen_ops,
+      'kpx_cpu/src/cpu/ppc/ppc-dyngen-ops.cpp',
+      cpp_args: dyngen_cpp_args,
+      include_directories: inc_dirs,
+      pic: false)
+
+    ppc_dyngen_ops_o = ppc_dyngen_ops_a.extract_objects('kpx_cpu/src/cpu/ppc/ppc-dyngen-ops.cpp')
+
+    ppc_dyngen_ops = custom_target('ppc-dyngen-ops',
+      command: [dyngen, '-o', '@OUTPUT@', '@INPUT@'],
+      input: ppc_dyngen_ops_o,
+      output: 'ppc-dyngen-ops.hpp',
+    )
+
+    src += [basic_dyngen_ops, ppc_dyngen_ops]
+    src += [
+      'kpx_cpu/src/cpu/jit/jit-cache.cpp',
+      'kpx_cpu/src/cpu/jit/basic-dyngen.cpp',
+      'kpx_cpu/src/cpu/ppc/ppc-dyngen.cpp',
+      'kpx_cpu/src/cpu/ppc/ppc-jit.cpp',
+    ]
+  endif
+
+  perl = find_program('perl')
+  genexecpl = files('kpx_cpu/src/cpu/ppc/genexec.pl')
+  inc_dirs += 'kpx_cpu/src/cpu/ppc'
+  ppc_preprocessed = cxx.preprocess('kpx_cpu/src/cpu/ppc/ppc-decode.cpp',
+    include_directories: include_directories(inc_dirs))
+
+  ppc_impl = custom_target('ppc-execute-impl',
+    command: [perl, genexecpl],
+    input: ppc_preprocessed,
+    output: 'ppc-execute-impl.hpp',
+    depend_files: genexecpl,
+    feed: true,
+    capture: true)
+
+  src += [
+    ppc_impl,
+    'kpx_cpu/src/mathlib/ieeefp.cpp',
+    'kpx_cpu/src/mathlib/mathlib.cpp',
+    'kpx_cpu/src/cpu/ppc/ppc-cpu.cpp',
+    'kpx_cpu/src/cpu/ppc/ppc-decode.cpp',
+    'kpx_cpu/src/cpu/ppc/ppc-execute.cpp',
+    'kpx_cpu/src/cpu/ppc/ppc-translate.cpp',
+    'kpx_cpu/src/utils/utils-cpuinfo.cpp',
+    'kpx_cpu/sheepshaver_glue.cpp',
+    'kpx_cpu/ppc-dis.c',
+  ]
+endif
+
+
+
+if enable_mon
+  inc_dirs += '../../cxmon/src'
+  src += [
+    '../../cxmon/src/mon.cpp',
+    '../../cxmon/src/mon_6502.cpp',
+    '../../cxmon/src/mon_z80.cpp',
+    '../../cxmon/src/mon_cmd.cpp',
+    '../../cxmon/src/mon_lowmem.cpp',
+    '../../cxmon/src/mon_disass.cpp',
+    '../../cxmon/src/mon_ppc.cpp',
+    '../../cxmon/src/disass/floatformat.c',
+    '../../cxmon/src/disass/i386-dis.c',
+    '../../cxmon/src/disass/m68k-dis.c',
+    '../../cxmon/src/disass/m68k-opc.c',
+  ]
+endif
+
+executable('SheepShaver', src,
+  dependencies: deps,
+  include_directories: inc_dirs,
+  install: true)
+
+install_data(keycodes,
+  install_dir: get_option('datadir')/'SheepShaver')
+
+install_man('Unix/SheepShaver.1')

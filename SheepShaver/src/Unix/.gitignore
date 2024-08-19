@@ -16,6 +16,7 @@ configure
 basic-dyngen-ops.hpp
 ppc-dyngen-ops.hpp
 ppc-execute-impl.cpp
+ppc-execute-impl.hpp
 dyngen
 
 # Generated files from the Xcode build

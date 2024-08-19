@@ -404,7 +404,7 @@ static void mn_about(...)
 	                     "website-label", GetString(STR_ABOUT_WEBSITE_LABEL),
 	                     "license", GetString(STR_ABOUT_LICENSE),
 	                     "wrap-license", true,
-	                     "logo-icon-name", "SheepShaver",
+	                     "logo-icon-name", GetString(STR_APP_ID),
 	                     NULL);
 }
 
