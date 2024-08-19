@@ -1782,4 +1782,4 @@ void powerpc_cpu::execute_mtvscr(uint32 opcode)
  *		Explicit template instantiations
  **/
 
-#include "ppc-execute-impl.cpp"
+#include "ppc-execute-impl.hpp"
