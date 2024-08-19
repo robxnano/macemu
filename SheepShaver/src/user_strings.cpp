@@ -63,7 +63,7 @@ user_string_def common_strings[] = {
 	{STR_CREATE_BUTTON, "Create"},
 	{STR_APP_NAME, "SheepShaver"},
 	{STR_APP_DISPLAY_NAME, "SheepShaver"},
-	{STR_APP_ID, "net.cebix.SheepShaver"},
+	{STR_APP_ID, APP_ID},
 
 	{STR_NOT_ENOUGH_MEMORY_ERR, "Your computer does not have enough memory to run SheepShaver."},
 	{STR_NO_KERNEL_DATA_ERR, "Cannot create Kernel Data area: %s (%08x)."},

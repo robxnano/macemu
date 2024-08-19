@@ -1,0 +1,12 @@
+option('gtk', type: 'combo', choices: ['auto', '2', '3', 'disabled'], value: 'auto', description: 'Build GTK launcher')
+option('sdl', type: 'combo', choices: ['auto', '2', '3', 'disabled'], value: 'auto', description: 'Use SDL for audio/video')
+option('bincue', type: 'feature', value: 'auto', description: 'BIN/CUE support')
+option('slirp', type: 'boolean', value: true, description: 'Use slirp for networking')
+option('addressing', type: 'combo', choices: ['real', 'direct'], value: 'real', description: 'Set the addressing mode to use')
+option('offset', type: 'string', value: '0x10000000', description: 'natmem offset for direct addressing')
+option('dyngen', type: 'combo', choices: ['precompiled', 'enabled', 'disabled', 'auto'], value: 'auto', description: 'Use dyngen for PPC emulation')
+option('jit', type: 'feature', value: 'auto', description: 'Use just-in-time compilation')
+option('mon', type: 'boolean', value: false, description: 'Enable the mon debugger')
+option('libvhd', type: 'feature', value: 'auto', description: 'Enable VHD disk images')
+option('vosf', type: 'boolean', value: false, description: 'enable video on SEGV signals')
+
