@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl Written in 2002 by Christian Bauer et al.
 
-AC_INIT([Basilisk II], 1.0, [Christian.Bauer@uni-mainz.de], BasiliskII)
+AC_INIT([Basilisk II], 1.1, [https://github.com/kanjitalk755/macemu/issues], BasiliskII, [https://basilisk.cebix.net])
 AC_CONFIG_SRCDIR(main_unix.cpp)
 AC_PREREQ(2.52)
 AC_CONFIG_HEADER(config.h)
@@ -11,6 +11,8 @@ AC_USE_SYSTEM_EXTENSIONS
 dnl Aliases for PACKAGE and VERSION macros.
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME", [Define this program name.])
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION", [Define this program version.])
+dnl App ID for Linux and Flatpak.
+AC_DEFINE(APP_ID, "net.cebix.BasiliskII", [Define the app ID for this program.])
 
 dnl Some systems do not put corefiles in the currect directory, avoid saving
 dnl cores for the configure tests since some are intended to dump core.

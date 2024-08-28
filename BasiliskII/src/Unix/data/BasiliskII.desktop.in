@@ -1,0 +1,19 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Basilisk II
+GenericName=Macintosh Emulator
+Comment=Classic 68k Macintosh Emulator
+Categories=Emulator;System;
+Icon=@APP_ID@
+Exec=BasiliskII
+Terminal=false
+Actions=launch;open-settings;
+
+[Desktop Action launch]
+Name=Start Basilisk II
+Exec=BasiliskII --nogui
+
+[Desktop Action open-settings]
+Name=Settings
+Exec=BasiliskII --settings

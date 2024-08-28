@@ -480,7 +480,7 @@ static void mn_about (GSimpleAction *action, GVariant *parameter, gpointer user_
 	                      "website-label", GetString(STR_ABOUT_WEBSITE_LABEL),
 	                      "license", GetString(STR_ABOUT_LICENSE),
 	                      "wrap-license", true,
-	                      "logo-icon-name", GetString(STR_APP_NAME),
+	                      "logo-icon-name", GetString(STR_APP_ID),
 	                      NULL);
     g_free(version);
 }

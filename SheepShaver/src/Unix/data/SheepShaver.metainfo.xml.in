@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@APP_ID@</id>
+
+  <name>SheepShaver</name>
+  <summary>Classic PowerPC Macintosh emulator</summary>
+
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <content_rating type="oars-1.1" />
+
+  <description><p>
+SheepShaver is an Open Source PowerPC Macintosh emulator. That is, it enables you to run 68k Mac OS software on your computer. However, you still need a copy of Mac OS 8.1-9.0.4 and a Macintosh ROM image to use SheepShaver.
+  </p></description>
+
+  <url type="homepage">@PACKAGE_URL@</url>
+  <url type="bugtracker">@PACKAGE_BUGREPORT@</url>
+
+  <launchable type="desktop-id">@APP_ID@.desktop</launchable>
+
+  <releases>
+    <release version="1.1" date="2024-08-28">
+      <description>
+        <p>Initial Flatpak release.</p>
+      </description>
+    </release>
+  </releases>
+</component>
