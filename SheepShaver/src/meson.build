@@ -250,7 +250,34 @@ executable('SheepShaver', src,
   include_directories: inc_dirs,
   install: true)
 
+metainfo_conf = configuration_data()
+metainfo_conf.set('APP_ID', app_id)
+metainfo_conf.set('PACKAGE_URL', package_url)
+metainfo_conf.set('PACKAGE_BUGREPORT', package_bugreport)
+
 install_data(keycodes,
   install_dir: get_option('datadir')/'SheepShaver')
+
+desktop_file = configure_file(
+  input: 'Unix/data/SheepShaver.desktop.in',
+  configuration: metainfo_conf,
+  output: f'@app_id@.desktop')
+
+install_data(desktop_file,
+  install_dir: get_option('datadir') / 'applications')
+
+metainfo_file = configure_file(
+  input: 'Unix/data/SheepShaver.metainfo.xml.in',
+  configuration: metainfo_conf,
+  output: f'@app_id@.metainfo.xml')
+
+install_data(metainfo_file,
+  install_dir: get_option('datadir') / 'metainfo')
+
+foreach res: [32, 64, 128, 256]
+  install_data(f'Unix/data/SheepShaver@res@.png',
+    install_dir: get_option('datadir') / f'icons/hicolor/@res@x@res@/apps',
+    rename: f'@app_id@.png')
+endforeach
 
 install_man('Unix/SheepShaver.1')

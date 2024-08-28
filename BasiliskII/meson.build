@@ -4,8 +4,8 @@ project('BasiliskII', 'c', 'cpp',
   default_options: ['buildtype=release', 'cpp_std=gnu++11', 'c_std=gnu11', 'warning_level=1'])
 
 app_id = 'net.cebix.BasiliskII'
-app_website = 'https://basilisk.cebix.net'
-app_bugreport = 'https://github.com/kanjitalk755/macemu/issues'
+package_url = 'https://basilisk.cebix.net'
+package_bugreport = 'https://github.com/kanjitalk755/macemu/issues'
 
 add_project_arguments('-DHAVE_CONFIG_H=1',
   '-DDATADIR="@0@/BasiliskII"'.format(get_option('datadir')),
@@ -15,8 +15,8 @@ cxx = meson.get_compiler('cpp')
 host_system = host_machine.system()
 config_h = configuration_data()
 config_h.set_quoted('APP_ID', app_id)
-config_h.set_quoted('APP_WEBSITE', app_website)
-config_h.set_quoted('APP_BUGREPORT', app_bugreport)
+config_h.set_quoted('PACKAGE_URL', package_url)
+config_h.set_quoted('PACKAGE_BUGREPORT', package_bugreport)
 args = []
 deps = []
 
@@ -259,3 +259,4 @@ else
 endif
 
 subdir('src')
+

@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl Written in 2002 by Christian Bauer
 
-AC_INIT([SheepShaver], 2.4, [Christian.Bauer@uni-mainz.de], SheepShaver)
+AC_INIT([SheepShaver], 2.5.1, [https://github.com/kanjitalk755/macemu/issues], SheepShaver, [https://sheepshaver.cebix.net])
 AC_CONFIG_SRCDIR(main_unix.cpp)
 AC_PREREQ(2.52)
 AC_CONFIG_HEADER(config.h)
@@ -16,6 +16,9 @@ AH_BOTTOM(
 dnl Canonical system information.
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
+
+dnl App ID for Linux and Flatpak.
+AC_DEFINE(APP_ID, "net.cebix.SheepShaver", [Define the app ID for this program.])
 
 dnl Some systems do not put corefiles in the currect directory, avoid saving
 dnl cores for the configure tests since some are intended to dump core.

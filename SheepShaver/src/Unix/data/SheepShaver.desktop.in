@@ -1,0 +1,19 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SheepShaver
+GenericName=Macintosh Emulator
+Comment=Classic PowerPC Macintosh Emulator
+Categories=Emulator;System;
+Icon=@APP_ID@
+Exec=SheepShaver
+Terminal=false
+Actions=launch;open-settings;
+
+[Desktop Action launch]
+Name=Start SheepShaver
+Exec=SheepShaver --nogui
+
+[Desktop Action open-settings]
+Name=Settings
+Exec=SheepShaver --settings
