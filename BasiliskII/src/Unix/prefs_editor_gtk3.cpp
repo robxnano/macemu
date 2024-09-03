@@ -787,7 +787,7 @@ static void cb_create_volume_response (GtkFileChooser *chooser, int response, Gt
 		{
 			dialog = gtk_message_dialog_new(GTK_WINDOW(win),
 					(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
-					GTK_MESSAGE_WARNING,
+					GTK_MESSAGE_QUESTION,
 					GTK_BUTTONS_OK_CANCEL,
 					"Volume Size (MB):");
 			box = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
