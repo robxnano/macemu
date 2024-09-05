@@ -16,6 +16,9 @@ DESTDIR =
 CC = @CC@
 CXX = @CXX@
 GCR = @GCR@
+MOC = @MOC@
+RCC = @RCC@
+UIC = @UIC@
 CFLAGS = @CFLAGS@
 CXXFLAGS = @CXXFLAGS@
 CPPFLAGS = @CPPFLAGS@ -I../include -I. -I../CrossPlatform -I../slirp
@@ -55,6 +58,8 @@ GUI_SRCS = ../prefs.cpp prefs_unix.cpp prefs_editor_gtk.cpp ../prefs_items.cpp \
 
 GRESOURCE_SRCS = ui/help-overlay.ui ui/menu.ui ui/prefs-editor.ui
 GRESOURCE_XML = ui/sheepshaver.gresource.xml
+
+QT_UISRC = ui/prefs-editor-qt.ui
 
 XPLAT_SRCS = ../CrossPlatform/vm_alloc.cpp ../CrossPlatform/sigsegv.cpp ../CrossPlatform/video_blit.cpp
 
@@ -181,7 +186,7 @@ uninstall:
 	rmdir $(DESTDIR)$(datadir)/$(APP)
 
 clean:
-	rm -f $(PROGS) $(OBJ_DIR)/* core* *.core *~ *.bak ui/*~ ui/*.bak ppc-execute-impl.cpp ppc-execute-impl.hpp g_resource.cpp
+	rm -f $(PROGS) $(OBJ_DIR)/* core* *.core *~ *.bak ui/*~ ui/*.bak ppc-execute-impl.cpp ppc-execute-impl.hpp g_resource.cpp ui_prefs-editor-qt.h
 	rm -f dyngen {basic,ppc}-dyngen-ops*.hpp ppc_asm.out.s
 	rm -rf $(APP_APP) $(GUI_APP_APP)
 
@@ -289,6 +294,14 @@ test-powerpc$(EXEEXT): $(TESTOBJS)
 
 g_resource.cpp: $(GRESOURCE_SRCS) $(GRESOURCE_XML)
 	$(GCR) --generate-source $(GRESOURCE_XML) --target $@
+
+obj/prefs_editor_qt.o: prefs_editor_qt.cpp obj/ui_prefs-editor-qt.h
+
+obj/ui_prefs-editor-qt.h: ui/prefs-editor-qt.ui
+	$(UIC) $< -o $@
+
+obj/moc_prefs_editor_qt.cpp: prefs_editor_qt.h
+	$(MOC) $< -o $@
 
 #-------------------------------------------------------------------------
 # DO NOT DELETE THIS LINE -- make depend depends on it.

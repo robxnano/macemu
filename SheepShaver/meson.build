@@ -23,6 +23,7 @@ if host_system != 'windows'
 endif
 
 enable_gtk = false
+enable_qt = false
 if host_system == 'windows' and get_option('gtk') == 'auto'
   want_gtk = '2'
 elif host_system == 'darwin' and get_option('gtk') == 'auto'
@@ -31,7 +32,11 @@ else
   want_gtk = get_option('gtk')
 endif
 
-if want_gtk != 'disabled'
+if get_option('qt').enabled()
+  config_h.set('ENABLE_QT', 1)
+  deps += dependency('Qt6', modules: ['Core', 'Widgets', 'Gui'])
+  enable_qt = true
+elif want_gtk != 'disabled'
   if want_gtk != '2'
     gtk = dependency('gtk+-3.0', version: '>= 3.22.0', required: want_gtk == '3')
   endif

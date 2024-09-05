@@ -148,6 +148,9 @@
 #define ENABLE_GTK_3_22
 #include "color_scheme.h"
 #endif
+#elif defined(ENABLE_QT)
+#include "prefs_editor_qt.h"
+#include <QApplication>
 #endif
 
 #ifdef ENABLE_XF86_DGA
@@ -710,10 +713,22 @@ static bool init_sdl()
 	assert(sdl_flags != 0);
 
 #ifdef USE_SDL_VIDEO
-#if REAL_ADDRESSING && defined(GDK_WINDOWING_WAYLAND)
+#if REAL_ADDRESSING && defined(SDL_VIDEO_DRIVER_WAYLAND)
 	// Needed to fix a crash when using Wayland
 	// Forces use of XWayland instead
-	setenv("SDL_VIDEODRIVER", "x11", true);
+	if (getenv("WAYLAND_DISPLAY") != nullptr) {
+	    setenv("SDL_VIDEODRIVER", "x11", false);
+	}
+	else {
+	    const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
+	    if (runtime_dir)
+	    {
+	        char path[PATH_MAX];
+	        snprintf(path, PATH_MAX, "%s/wayland-0", runtime_dir);
+	        if (access(path, W_OK) == 0)
+	            setenv("SDL_VIDEODRIVER", "x11", false);
+	    }
+	}
 #endif
 
 	// Don't let SDL block the screensaver
@@ -991,6 +1006,16 @@ int main(int argc, char **argv)
 		gtk_init(&argc, &argv);
 		gui_startup();
 	}
+#elif defined(ENABLE_QT)
+    if (use_gui) {
+        QApplication app(argc, argv);
+        PrefsEditorQt editor;
+        editor.show();
+        app.exec();
+        if (!editor.result()) {
+            QuitEmulator();
+        }
+    }
 #endif
 
 #if !EMULATED_PPC

@@ -100,7 +100,15 @@ else
   endif
 endif
 
-if enable_gtk
+if enable_qt
+  qt6 = import('qt6')
+  inc_dirs += 'Qt'
+  ui_src += 'Qt/prefs_editor_qt.cpp'
+  ui_src += qt6.preprocess(
+    ui_files: 'Qt/prefs_editor_qt.ui',
+    moc_headers: 'Qt/prefs_editor_qt.h',
+  )
+elif enable_gtk
   if gtk.version().version_compare('>= 3.0')
     gnome = import('gnome')
     link_args += cxx.get_supported_link_arguments('-rdynamic')
@@ -310,7 +318,7 @@ if enable_mon
   ]
 endif
 
-if host_system == 'windows'
+if host_system == 'windows' and not enable_qt
   windows = import('windows')
   src += windows.compile_resources('Windows/SheepShaver.rc')
   ui_src += windows.compile_resources('Windows/SheepShaverGUI.rc')

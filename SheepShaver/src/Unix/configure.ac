@@ -48,6 +48,13 @@ AC_ARG_WITH(gtk,            [  --with-gtk              use GTK 2 or 3 for user i
    *)      	 WANT_GTK="no";;
    esac],
   [WANT_GTK="any"])
+AC_ARG_WITH(qt,             [ --with-qt                use Qt 6 for user interface [default=no]],
+  [case "$withval" in
+   yes|true|any) WANT_QT="any";;
+   *6)           WANT_QT="Qt6";;
+   *)            WANT_QT="no";;
+   esac],
+  [WANT_QT="no"])
 AC_ARG_WITH(mon,            [  --with-mon              use mon as debugger [default=yes]], [WANT_MON=$withval], [WANT_MON=no])
 AC_ARG_WITH(dgcc,           [  --with-dgcc=COMPILER    use C++ COMPILER to compile synthetic opcodes or 'precompiled'], [DYNGEN_CC=$withval], [DYNGEN_CC=precompiled])
 
@@ -346,6 +353,34 @@ m4_ifndef([PKG_PROG_PKG_CONFIG], [m4_fatal(
 )])
 PKG_PROG_PKG_CONFIG
 
+dnl We use Qt and disable GTK if specified.
+if [[ "$WANT_QT" = "Qt6" -o "$WANT_QT" = "any" ]]; then
+  AX_CXX_COMPILE_STDCXX([17])
+  if [[ -z "$HAVE_CXX17" ]]; then
+    AC_MSG_ERROR([Qt requested but compiler does not supportC++17])
+  fi
+  PKG_CHECK_MODULES([Qt6], [Qt6 Qt6Gui Qt6Widgets > 6.2.0], [
+    WANT_QT=Qt6
+    WANT_GTK=no
+    GUI_CFLAGS="$Qt6_CFLAGS"
+    GUI_LIBS="$Qt6_LIBS"
+    PKG_CHECK_VAR([Qt6_TOOLS_DIR], [Qt6], [libexecdir])
+    AC_PATH_PROG([MOC], [moc], [], ["$Qt6_TOOLS_DIR"])
+    AC_PATH_PROG([RCC], [rcc], [], ["$Qt6_TOOLS_DIR"])
+    AC_PATH_PROG([UIC], [uic], [], ["$Qt6_TOOLS_DIR"])
+    if [[ -z "$MOC" ]] || [[ -z "$RCC" ]] || [[ -z "$UIC" ]]; then
+      AC_MSG_ERROR([Qt requested but tools not found.])
+    fi
+  ], [
+    WANT_QT=no
+    if [[ "$WANT_GTK" != "no" ]]; then
+      AC_MSG_WARN([Could not find Qt6 (version >= 6.2.0), falling back to GTK.])
+    else
+      AC_MSG_WARN([Could not find Qt6 (version >= 6.2.0), disabling user interface.])
+    fi
+  ])
+fi
+
 dnl We use GTK+ if possible.
 UISRCS=../dummy/prefs_editor_dummy.cpp
 if [[ "$WANT_GTK" = "GTK3" -o "$WANT_GTK" = "any" ]]; then
@@ -387,10 +422,16 @@ if [[ "x$WANT_GTK" != "xno" -a "x$WANT_STANDALONE_GUI" = "xno" ]]; then
   else
     UISRCS="prefs_editor_gtk.cpp"
   fi
+elif [[ "$WANT_QT" = "Qt6" ]]; then
+  AC_DEFINE(ENABLE_QT, 1, [Define if using Qt.])
+  UISRCS="prefs_editor_qt.cpp obj/moc_prefs_editor_qt.cpp"
 fi
 AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
 AC_SUBST(GCR)
+AC_SUBST(MOC)
+AC_SUBST(RCC)
+AC_SUBST(UIC)
 
 dnl Build external GUI if requested.
 if [[ "$WANT_STANDALONE_GUI" != "yes" ]]; then
@@ -1769,6 +1810,7 @@ echo Enable JIT compiler .............. : $WANT_JIT
 echo Enable video on SEGV signals ..... : $WANT_VOSF
 echo ESD sound support ................ : $WANT_ESD
 echo GTK user interface ............... : $WANT_GTK
+echo Qt user interface ................ : $WANT_QT
 echo mon debugger support ............. : $WANT_MON
 echo Addressing mode .................. : $WANT_ADDRESSING_MODE
 echo Bad memory access recovery type .. : $sigsegv_recovery
