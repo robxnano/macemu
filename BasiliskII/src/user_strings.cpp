@@ -31,6 +31,7 @@
  */
 
 #include "sysdeps.h"
+#include "config.h"
 #include "user_strings.h"
 
 #ifdef __BEOS__

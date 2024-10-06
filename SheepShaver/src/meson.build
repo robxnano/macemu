@@ -1,7 +1,13 @@
 configure_file(output: 'config.h', configuration: config_h)
 
-inc_dirs = ['include', 'kpx_cpu', 'kpx_cpu/include', 'kpx_cpu/src', 'Unix', 'CrossPlatform']
+inc_dirs = ['include', 'kpx_cpu', 'kpx_cpu/include', 'kpx_cpu/src', 'CrossPlatform']
+if host_system == 'windows'
+  inc_dirs += 'Windows'
+else
+  inc_dirs += 'Unix'
+endif
 
+ui_src = []
 src = [
   'adb.cpp',
   'audio.cpp',
@@ -32,7 +38,40 @@ src = [
   'dummy/prefs_dummy.cpp',
 ]
 
-if host_system != 'windows'
+if host_system == 'windows'
+  src += [
+    'dummy/prefs_editor_dummy.cpp',
+    'dummy/scsi_dummy.cpp',
+    'Windows/clip_windows.cpp',
+    'Windows/ether_windows.cpp',
+    'Windows/extfs_windows.cpp',
+    'Windows/main_windows.cpp',
+    'Windows/posix_emu.cpp',
+    'Windows/prefs_windows.cpp',
+    'Windows/serial_windows.cpp',
+    'Windows/sys_windows.cpp',
+    'Windows/timer_windows.cpp',
+    'Windows/user_strings_windows.cpp',
+    'Windows/util_windows.cpp',
+    'Windows/xpram_windows.cpp',
+	  'Windows/b2ether/packet32.cpp',
+    'Windows/cdenable/cache.cpp',
+    'Windows/cdenable/eject_nt.cpp',
+    'Windows/cdenable/ntcd.cpp',
+    'Windows/router/arp.cpp',
+    'Windows/router/dump.cpp',
+    'Windows/router/dynsockets.cpp',
+    'Windows/router/ftp.cpp',
+    'Windows/router/icmp.cpp',
+	  'Windows/router/mib/interfaces.cpp',
+	  'Windows/router/iphelp.cpp',
+	  'Windows/router/ipsocket.cpp',
+	  'Windows/router/mib/mibaccess.cpp',
+	  'Windows/router/router.cpp',
+	  'Windows/router/tcp.cpp',
+	  'Windows/router/udp.cpp',
+  ]
+else
   src += [
     'Unix/about_window_unix.cpp',
     'Unix/disk_sparsebundle.cpp',
@@ -69,14 +108,28 @@ if use_gtk
       c_name: 'sheepshaver',
       source_dir: 'Unix',
       dependencies: ui_xml)
-    src += [ui, 'Unix/prefs_editor_gtk3.cpp', 'Unix/color_scheme.cpp']
+    ui_src += [ui, 'Unix/prefs_editor_gtk3.cpp', 'Unix/color_scheme.cpp']
+  elif host_system == 'windows'
+    ui_src += [
+      'prefs.cpp',
+      'Windows/prefs_editor_gtk.cpp',
+      'Windows/prefs_windows.cpp',
+      'Windows/xpram_windows.cpp',
+	    'prefs_items.cpp',
+	    'user_strings.cpp',
+	    'Windows/user_strings_windows.cpp',
+	    'Windows/util_windows.cpp',
+	    'dummy/prefs_dummy.cpp',
+      'Windows/b2ether/packet32.cpp',
+    ]
   else
-    src += 'Unix/prefs_editor_gtk.cpp'
+    ui_src += 'Unix/prefs_editor_gtk.cpp'
   endif
 endif
 
-if get_option('slirp')
+if get_option('slirp') or host_system == 'windows'
   inc_dirs += 'slirp'
+  add_project_arguments('-fno-strict-aliasing', language: 'c')
   src += [
     'slirp/bootp.c',
     'slirp/ip_output.c',
@@ -104,8 +157,10 @@ if get_option('sdl') != 'disabled'
     'SDL/video_sdl.cpp',
     'SDL/video_sdl2.cpp',
     'SDL/audio_sdl.cpp',
-    'dummy/clip_dummy.cpp',
   ]
+  if host_system != 'windows'
+    src += 'dummy/clip_dummy.cpp'
+  endif
   keycodes = 'SDL/keycodes'
 elif host_system == 'darwin'
   src += [
@@ -130,7 +185,11 @@ if not host_machine.cpu_family().startswith('ppc')
     if host_machine.cpu_family().startswith('x86')
       add_project_arguments('-fomit-frame-pointer', language: ['c', 'cpp'])
     endif
-    inc_dirs += 'Unix/dyngen_precompiled'
+    if host_system == 'windows'
+      inc_dirs += 'Windows/cygwin_precompiled_dyngen'
+    else
+      inc_dirs += 'Unix/dyngen_precompiled'
+    endif
     src += [
       'kpx_cpu/src/cpu/jit/jit-cache.cpp',
       'kpx_cpu/src/cpu/jit/basic-dyngen.cpp',
@@ -189,8 +248,9 @@ if not host_machine.cpu_family().startswith('ppc')
       output: 'ppc-dyngen-ops.hpp',
     )
 
-    src += [basic_dyngen_ops, ppc_dyngen_ops]
     src += [
+      basic_dyngen_ops,
+      ppc_dyngen_ops,
       'kpx_cpu/src/cpu/jit/jit-cache.cpp',
       'kpx_cpu/src/cpu/jit/basic-dyngen.cpp',
       'kpx_cpu/src/cpu/ppc/ppc-dyngen.cpp',
@@ -226,8 +286,6 @@ if not host_machine.cpu_family().startswith('ppc')
   ]
 endif
 
-
-
 if enable_mon
   inc_dirs += '../../cxmon/src'
   src += [
@@ -245,39 +303,56 @@ if enable_mon
   ]
 endif
 
+if host_system == 'windows'
+  windows = import('windows')
+  src += windows.compile_resources('Windows/SheepShaver.rc')
+  ui_src += windows.compile_resources('Windows/SheepShaverGUI.rc')
+  if use_gtk
+    executable('SheepShaverGUI', ui_src,
+      dependencies: deps,
+      include_directories: inc_dirs,
+      install: true)
+  endif
+else
+  src += ui_src
+endif
+
 executable('SheepShaver', src,
-  dependencies: deps,
+  dependencies: [deps, sdl],
   include_directories: inc_dirs,
   install: true)
-
-metainfo_conf = configuration_data()
-metainfo_conf.set('APP_ID', app_id)
-metainfo_conf.set('PACKAGE_URL', package_url)
-metainfo_conf.set('PACKAGE_BUGREPORT', package_bugreport)
 
 install_data(keycodes,
   install_dir: get_option('datadir')/'SheepShaver')
 
-desktop_file = configure_file(
-  input: 'Unix/data/SheepShaver.desktop.in',
-  configuration: metainfo_conf,
-  output: f'@app_id@.desktop')
+if host_system not in ['windows', 'darwin']
+  metainfo_conf = configuration_data()
+  metainfo_conf.set('APP_ID', app_id)
+  metainfo_conf.set('PACKAGE_URL', package_url)
+  metainfo_conf.set('PACKAGE_BUGREPORT', package_bugreport)
 
-install_data(desktop_file,
-  install_dir: get_option('datadir') / 'applications')
+  desktop_file = configure_file(
+    input: 'Unix/data/SheepShaver.desktop.in',
+    configuration: metainfo_conf,
+    output: f'@app_id@.desktop')
 
-metainfo_file = configure_file(
-  input: 'Unix/data/SheepShaver.metainfo.xml.in',
-  configuration: metainfo_conf,
-  output: f'@app_id@.metainfo.xml')
+  install_data(desktop_file,
+    install_dir: get_option('datadir') / 'applications')
 
-install_data(metainfo_file,
-  install_dir: get_option('datadir') / 'metainfo')
+  metainfo_file = configure_file(
+    input: 'Unix/data/SheepShaver.metainfo.xml.in',
+    configuration: metainfo_conf,
+    output: f'@app_id@.metainfo.xml')
 
-foreach res: [32, 64, 128, 256]
-  install_data(f'Unix/data/SheepShaver@res@.png',
-    install_dir: get_option('datadir') / f'icons/hicolor/@res@x@res@/apps',
-    rename: f'@app_id@.png')
-endforeach
+  install_data(metainfo_file,
+    install_dir: get_option('datadir') / 'metainfo')
 
-install_man('Unix/SheepShaver.1')
+  foreach res: [32, 64, 128, 256]
+    install_data(f'Unix/data/SheepShaver@res@.png',
+      install_dir: get_option('datadir') / f'icons/hicolor/@res@x@res@/apps',
+      rename: f'@app_id@.png')
+  endforeach
+
+  install_man('Unix/SheepShaver.1')
+endif
+

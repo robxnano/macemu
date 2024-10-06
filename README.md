@@ -101,14 +101,14 @@ $ make
 ```
 ### Meson build (optional)
 The Meson build is provided as an alternative and not all options from the configure script will be available.
-You can start the build from the root of the SheepShaver or BasiliskII directory, but only Linux is supported at the moment.
+You can start the build from the root of the SheepShaver or BasiliskII directory, but only MinGW32 and Linux are supported at the moment.
 ```
 $ cd macemu/SheepShaver
 $ meson setup build
 $ ninja -C build
 ```
 
-Sometimes the config.h file left over from the autotools build process can interfere with the build. If you get strange build errors, cd into the src/Unix directory and run `make distclean`.
+Sometimes the config.h file left over from the autotools build process can interfere with the build. If you get strange build errors, cd into the src/Unix or src/Windows directory and run `make distclean`.
 
 ### Recommended key bindings for gnome
 https://github.com/kanjitalk755/macemu/blob/master/SheepShaver/doc/Linux/gnome_keybindings.txt

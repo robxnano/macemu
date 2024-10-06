@@ -12,11 +12,23 @@ else
 endif
 
 if host_machine.cpu_family() == 'x86_64'
-  args += ['-DX86_64_ASSEMBLY', '-DUNALIGNED_PROFITABLE', '-DOPTIMIZED_FLAGS']
+  host_args += ['-DX86_64_ASSEMBLY', '-DUNALIGNED_PROFITABLE', '-DOPTIMIZED_FLAGS']
+elif host_machine.cpu_family() == 'x86'
+  host_args += ['-DX86_ASSEMBLY', '-DSAHF_SETO_PROFITABLE', '-DOPTIMIZED_FLAGS']
 endif
 
-inc_dirs = ['include', uae_path,  'Unix', 'CrossPlatform']
+if build_machine.cpu_family() == 'x86_64'
+  build_args += ['-DX86_64_ASSEMBLY', '-DUNALIGNED_PROFITABLE', '-DOPTIMIZED_FLAGS']
+elif build_machine.cpu_family() == 'x86'
+  build_args += ['-DX86_ASSEMBLY', '-DSAHF_SETO_PROFITABLE', '-DOPTIMIZED_FLAGS']
+endif
 
+inc_dirs = ['include', uae_path, 'CrossPlatform']
+native_inc_dirs = inc_dirs
+inc_dirs += host_system == 'windows' ? 'Windows' : 'Unix'
+native_inc_dirs += build_system == 'windows' ? 'Windows' : 'Unix'
+
+ui_src = []
 src = [
   'adb.cpp',
   'audio.cpp',
@@ -50,7 +62,40 @@ src = [
   fpu_src,
 ]
 
-if host_system != 'windows'
+if host_system == 'windows'
+  src += [
+    'dummy/prefs_editor_dummy.cpp',
+    'dummy/scsi_dummy.cpp',
+    'Windows/clip_windows.cpp',
+    'Windows/ether_windows.cpp',
+    'Windows/extfs_windows.cpp',
+    'Windows/main_windows.cpp',
+    'Windows/posix_emu.cpp',
+    'Windows/prefs_windows.cpp',
+    'Windows/serial_windows.cpp',
+    'Windows/sys_windows.cpp',
+    'Windows/timer_windows.cpp',
+    'Windows/user_strings_windows.cpp',
+    'Windows/util_windows.cpp',
+    'Windows/xpram_windows.cpp',
+    'Windows/b2ether/packet32.cpp',
+    'Windows/cdenable/cache.cpp',
+    'Windows/cdenable/eject_nt.cpp',
+    'Windows/cdenable/ntcd.cpp',
+    'Windows/router/arp.cpp',
+    'Windows/router/dump.cpp',
+    'Windows/router/dynsockets.cpp',
+    'Windows/router/ftp.cpp',
+    'Windows/router/icmp.cpp',
+    'Windows/router/mib/interfaces.cpp',
+    'Windows/router/iphelp.cpp',
+    'Windows/router/ipsocket.cpp',
+    'Windows/router/mib/mibaccess.cpp',
+    'Windows/router/router.cpp',
+    'Windows/router/tcp.cpp',
+    'Windows/router/udp.cpp',
+  ]
+else
   src += [
     'Unix/disk_sparsebundle.cpp',
     'Unix/ether_unix.cpp',
@@ -75,22 +120,29 @@ if host_system != 'windows'
 endif
 
 build68k = executable('build68k', uae_path / 'build68k.c',
-  include_directories: inc_dirs)
+  native: true,
+  c_args: build_args,
+  include_directories: native_inc_dirs)
 
+build68k_cmd = build_system == 'windows' ? [build68k, '@INPUT@'] : build68k
 cpudefs = custom_target('cpudefs',
   output: 'cpudefs.cpp',
   input: uae_path / 'table68k',
-  command: build68k,
-  feed: true,
+  command: build68k_cmd,
+  feed: build_system != 'windows',
   capture: true)
 
 gencpu = executable('gencpu', uae_path / 'gencpu.c', uae_path / 'readcpu.cpp', cpudefs,
+  native: true,
+  c_args: build_args,
   build_by_default: true,
-  include_directories: inc_dirs)
+  include_directories: native_inc_dirs)
 
 gencomp = executable('gencomp', uae_path / 'compiler/gencomp.c', uae_path / 'readcpu.cpp', cpudefs,
+  native: true,
+  c_args: build_args,
   build_by_default: true,
-  include_directories: inc_dirs)
+  include_directories: native_inc_dirs)
 
 cpuemu = custom_target('cpuemu',
   output: ['cpuemu.cpp', 'cpuemu_nf.cpp', 'cpustbl.cpp', 'cpustbl_nf.cpp', 'cputbl.h'],
@@ -118,10 +170,24 @@ if use_gtk
       c_name: 'basiliskii',
       source_dir: 'Unix',
       dependencies: ui_xml)
-    src += [ui, 'Unix/prefs_editor_gtk3.cpp', 'Unix/color_scheme.cpp']
+    ui_src += [ui, 'Unix/prefs_editor_gtk3.cpp', 'Unix/color_scheme.cpp']
+  elif host_system == 'windows'
+    ui_src += [
+      'prefs.cpp',
+      'Windows/prefs_editor_gtk.cpp',
+      'Windows/prefs_windows.cpp',
+      'Windows/xpram_windows.cpp',
+	    'prefs_items.cpp',
+	    'user_strings.cpp',
+	    'Windows/user_strings_windows.cpp',
+	    'Windows/util_windows.cpp',
+      'Windows/b2ether/packet32.cpp',
+    ]
   else
-    src += 'Unix/prefs_editor_gtk.cpp'
+    ui_src += 'Unix/prefs_editor_gtk.cpp'
   endif
+else
+  src += 'dummy/prefs_editor_dummy.cpp'
 endif
 
 if get_option('slirp')
@@ -154,8 +220,10 @@ if get_option('sdl') != 'disabled'
     'SDL/video_sdl2.cpp',
     'SDL/video_sdl3.cpp',
     'SDL/audio_sdl.cpp',
-    'dummy/clip_dummy.cpp',
   ]
+  if host_system != 'windows'
+    src += 'dummy/clip_dummy.cpp'
+  endif
   keycodes = 'SDL/keycodes'
 elif host_system == 'darwin'
   src += [
@@ -195,53 +263,70 @@ endif
 cpuemus = []
 foreach i: range(1, 9)
   cpuemus += static_library(f'cpuemu@i@', cpuemu,
-    cpp_args: [args, f'-DPART_@i@'],
+    cpp_args: [args, host_args, f'-DPART_@i@'],
     include_directories: inc_dirs)
   cpuemus += static_library(f'cpuemu@i@_nf', cpuemu,
-    cpp_args: [args, f'-DPART_@i@', '-DNOFLAGS'],
+    cpp_args: [args, host_args, f'-DPART_@i@', '-DNOFLAGS'],
     include_directories: inc_dirs)
   cpuemus += static_library(f'compemu@i@', compemu,
-    cpp_args: [args, f'-DPART_@i@'],
+    cpp_args: [args, host_args, f'-DPART_@i@'],
     include_directories: inc_dirs)
 endforeach
 
+if host_system == 'windows'
+  windows = import('windows')
+  src += windows.compile_resources('Windows/BasiliskII.rc')
+  ui_src += windows.compile_resources('Windows/BasiliskIIGUI.rc')
+  if use_gtk
+    executable('BasiliskIIGUI', ui_src,
+      dependencies: deps,
+      include_directories: inc_dirs,
+      install: true)
+  endif
+else
+  src += ui_src
+endif
+
 executable('BasiliskII',
   sources: src,
-  c_args: args,
-  cpp_args: args,
-  dependencies: deps,
+  c_args: [args, host_args],
+  cpp_args: [args, host_args],
+  dependencies: [deps, sdl],
   link_with: cpuemus,
   include_directories: inc_dirs,
   install: true)
 
-metainfo_conf = configuration_data()
-metainfo_conf.set('APP_ID', app_id)
-metainfo_conf.set('PACKAGE_URL', package_url)
-metainfo_conf.set('PACKAGE_BUGREPORT', package_bugreport)
-
 install_data(keycodes,
   install_dir: get_option('datadir') / 'BasiliskII')
 
-desktop_file = configure_file(
-  input: 'Unix/data/BasiliskII.desktop.in',
-  configuration: metainfo_conf,
-  output: f'@app_id@.desktop')
+if host_system not in ['windows', 'darwin']
+  metainfo_conf = configuration_data()
+  metainfo_conf.set('APP_ID', app_id)
+  metainfo_conf.set('PACKAGE_URL', package_url)
+  metainfo_conf.set('PACKAGE_BUGREPORT', package_bugreport)
 
-install_data(desktop_file,
-  install_dir: get_option('datadir') / 'applications')
+  desktop_file = configure_file(
+    input: 'Unix/data/BasiliskII.desktop.in',
+    configuration: metainfo_conf,
+    output: f'@app_id@.desktop')
 
-metainfo_file = configure_file(
-  input: 'Unix/data/BasiliskII.metainfo.xml.in',
-  configuration: metainfo_conf,
-  output: f'@app_id@.metainfo.xml')
+  install_data(desktop_file,
+    install_dir: get_option('datadir') / 'applications')
 
-install_data(metainfo_file,
-  install_dir: get_option('datadir') / 'metainfo')
+  metainfo_file = configure_file(
+    input: 'Unix/data/BasiliskII.metainfo.xml.in',
+    configuration: metainfo_conf,
+    output: f'@app_id@.metainfo.xml')
 
-foreach res: [64, 128]
-  install_data(f'Unix/data/BasiliskII@res@.png',
-    install_dir: get_option('datadir') / f'icons/hicolor/@res@x@res@/apps',
-    rename: f'@app_id@.png')
-endforeach
+  install_data(metainfo_file,
+    install_dir: get_option('datadir') / 'metainfo')
 
-install_man('Unix/BasiliskII.1')
+  foreach res: [64, 128]
+    install_data(f'Unix/data/BasiliskII@res@.png',
+      install_dir: get_option('datadir') / f'icons/hicolor/@res@x@res@/apps',
+      rename: f'@app_id@.png')
+  endforeach
+
+  install_man('Unix/BasiliskII.1')
+endif
+

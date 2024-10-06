@@ -30,7 +30,7 @@ typedef unsigned long ioctlsockopt_t;
 #endif
 //# include <windows.h>
 # include <winsock2.h>
-# include <WS2tcpip.h>
+# include <ws2tcpip.h>
 
 # include <sys/timeb.h>
 # include <iphlpapi.h>
