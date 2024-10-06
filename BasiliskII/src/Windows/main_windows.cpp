@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <SDL.h>
 #include <SDL_mutex.h>

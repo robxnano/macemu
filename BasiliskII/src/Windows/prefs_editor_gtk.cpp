@@ -428,7 +428,7 @@ static void cb_quit(...)
 }
 
 // "OK" button of "About" dialog clicked
-static void dl_quit(GtkWidget *dialog)
+void dl_quit(GtkWidget *dialog)
 {
 	gtk_widget_destroy(dialog);
 }

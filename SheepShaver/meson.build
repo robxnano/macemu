@@ -7,10 +7,6 @@ app_id = 'net.cebix.SheepShaver'
 package_url = 'https://sheepshaver.cebix.net'
 package_bugreport = 'https://github.com/kanjitalk755/macemu/issues'
 
-add_project_arguments('-DHAVE_CONFIG_H=1', '-D_REENTRANT',
-  '-DDATADIR="@0@/SheepShaver"'.format(get_option('datadir')),
-  language: ['c', 'cpp'])
-
 cxx = meson.get_compiler('cpp')
 host_system = host_machine.system()
 config_h = configuration_data()
@@ -19,24 +15,34 @@ config_h.set_quoted('PACKAGE_URL', package_url)
 config_h.set_quoted('PACKAGE_BUGREPORT', package_bugreport)
 deps = []
 
+add_project_arguments('-DHAVE_CONFIG_H=1', language: ['c', 'cpp'])
+
+if host_system not in ['windows', 'darwin']
+  data_dir = get_option('datadir') / 'SheepShaver'
+  add_project_arguments(f'-DDATADIR="@data_dir@"', language: ['c', 'cpp'])
+endif
+
 if get_option('gtk') in ['2', '3'] or \
-   get_option('gtk') == 'auto' and host_system not in ['windows', 'darwin']
+   (get_option('gtk') == 'auto' and host_system != 'darwin')
   config_h.set('ENABLE_GTK', 1)
   use_gtk = true
-  if get_option('gtk') in ['3', 'auto']
+  if get_option('gtk') == '3' or \
+     (get_option('gtk') == 'auto' and host_system != 'windows')
     gtk = dependency('gtk+-3.0', version: '>= 3.22.0', required: get_option('gtk') == '3')
-    if not gtk.found()
+    if gtk.found()
+      add_project_link_arguments('-rdynamic', language: ['c', 'cpp'])
+    else
       gtk = dependency('gtk+-2.0', version: '>= 2.24.0')
     endif
   else
     gtk = dependency('gtk+-2.0', version: '>= 2.24.0')
   endif
   deps += gtk
-  add_project_link_arguments('-rdynamic', language: ['c', 'cpp'])
 else
   use_gtk = false
 endif
 
+sdl = []
 if get_option('sdl') != 'disabled'
   config_h.set('USE_SDL', 1)
   config_h.set('USE_SDL_AUDIO', 1)
@@ -49,15 +55,14 @@ if get_option('sdl') != 'disabled'
   else
     sdl = dependency('sdl2', version: '>= 2.0.5')
   endif
-  deps += sdl
-elif host_machine.system() not in ['windows', 'darwin']
+elif host_system not in ['windows', 'darwin']
   deps += [dependency('x11'), dependency('xext')]
 endif
 
 
 if not (get_option('bincue').disabled())
   if get_option('sdl') == 'disabled'
-    if get_option('bincue').enabled() and host_machine.system() != 'darwin'
+    if get_option('bincue').enabled() and host_system != 'darwin'
       error('BIN/CUE support requires SDL.')
     endif
   else
@@ -88,6 +93,12 @@ else
   pthread_functions = ['clock_gettime', 'clock_nanosleep', 'pthread_cancel',
     'pthread_cond_init', 'pthread_testcancel', 'pthread_mutexattr_setprotocol',
     'pthread_mutexattr_settype', 'pthread_mutexattr_setpshared']
+endif
+
+if host_system == 'windows'
+  deps += [cxx.find_library('iphlpapi'), cxx.find_library('ws2_32')]
+elif host_system == 'sunos'
+  deps += [dependency('x11'), cxx.find_library('nsl'), cxx.find_library('socket')]
 endif
 
 headers = [
@@ -185,50 +196,81 @@ if get_option('mon')
 endif
 
 libvhd = cxx.find_library('vhd', required: get_option('libvhd'))
-libuuid = cxx.find_library('uuid', required: get_option('libvhd'))
-if libvhd.found() and libuuid.found()
-  deps += [libvhd, libuuid]
+if libvhd.found()
+  libuuid = cxx.find_library('uuid', required: get_option('libvhd'))
+  if libuuid.found()
+    deps += [libvhd, libuuid]
+  endif
 endif
 
-if config_h.get('HAVE_MMAP') == 1 and config_h.get('HAVE_MPROTECT') == 1 and config_h.get('HAVE_MUNMAP') == 1
+if config_h.get('HAVE_MMAP', 0) == 1 \
+   and config_h.get('HAVE_MPROTECT', 0) == 1 \
+   and config_h.get('HAVE_MUNMAP', 0) == 1
   config_h.set('HAVE_MMAP_VM', 1)
 endif
 
-conftest = configuration_data()
-conftest.merge_from(config_h)
-test_file = configure_file(output: 'conftest.h', configuration: conftest)
-test_str = run_command(['cat', test_file], capture: true, check: false).stdout()
-sigsegv_test = test_str + '''
+if host_system == 'windows'
+  message('Using Win32 exceptions for SIGSEGV recovery')
+  can_vosf = true
+  config_h.set('HAVE_WIN32_VM', 1)
+  config_h.set('HAVE_WIN32_EXCEPTIONS', 1)
+  config_h.set('HAVE_SIGSEGV_SKIP_INSTRUCTION', 1)
+elif meson.can_run_host_binaries()
+  sigsegv_test = ''
+  foreach key: config_h.keys()
+    value = config_h.get(key, '')
+    sigsegv_test += f'#define @key@ @value@\n'
+  endforeach
+  sigsegv_test += '''
 #define @0@ 1
 #define CONFIGURE_TEST_SIGSEGV_RECOVERY
 #include "vm_alloc.cpp"
 #include "sigsegv.cpp"
-'''
-inc_dir = include_directories('src/CrossPlatform')
-can_vosf = false
-if cxx.run(sigsegv_test.format('HAVE_SIGINFO_T'),
-  name: 'sigsegv_recovery',
-  include_directories: inc_dir).returncode() == 0
-  config_h.set('HAVE_SIGINFO_T', 1)
-  can_vosf = true
-  sigsegv_recovery = 'siginfo'
-  sigsegv_test = '#define HAVE_SIGINFO_T 1\n' + sigsegv_test
-elif cxx.run(sigsegv_test.format('HAVE_SIGCONTEXT_SUBTERFUGE'),
-  name: 'sigsegv_subterfuge',
-  include_directories: inc_dir).returncode() == 0
-  config_h.set('HAVE_SIGCONTEXT_SUBTERFUGE', 1)
-  can_vosf = true
-  sigsegv_recovery = 'sigcontext'
-  sigsegv_test = '#define HAVE_SIGCONTEXT_SUBTERFUGE 1\n' + sigsegv_test
-else
-  sigsegv_recovery = 'None'
-endif
+  '''
+  inc_dir = include_directories('src/CrossPlatform')
 
-if cxx.run(sigsegv_test.format('HAVE_SIGSEGV_SKIP_INSTRUCTION'),
-  name: 'sigsegv_skip_instruction',
-  include_directories: inc_dir).returncode() == 0
-  config_h.set('HAVE_SIGSEGV_SKIP_INSTRUCTION', 1)
+  if cxx.run(sigsegv_test.format('HAVE_SIGINFO_T'),
+    name: 'sigsegv_recovery_siginfo',
+    include_directories: inc_dir).returncode() == 0
+    config_h.set('HAVE_SIGINFO_T', 1)
+    sigsegv_recovery = 'siginfo'
+    sigsegv_test = '#define HAVE_SIGINFO_T 1\n' + sigsegv_test
+  elif cxx.run(sigsegv_test.format('HAVE_MACH_EXCEPTIONS'),
+    name: 'sigsegv_mach_exceptions',
+    include_directories: inc_dir).returncode() == 0
+    config_h.set('HAVE_MACH_EXCEPTIONS', 1)
+    sigsegv_recovery = 'mach'
+    sigsegv_test = '#define HAVE_MACH_EXCEPTIONS 1\n' + sigsegv_test
+  elif cxx.run(sigsegv_test.format('HAVE_SIGCONTEXT_SUBTERFUGE'),
+    name: 'sigsegv_subterfuge',
+    include_directories: inc_dir).returncode() == 0
+    config_h.set('HAVE_SIGCONTEXT_SUBTERFUGE', 1)
+    sigsegv_recovery = 'sigcontext'
+    sigsegv_test = '#define HAVE_SIGCONTEXT_SUBTERFUGE 1\n' + sigsegv_test
+  else
+    sigsegv_recovery = 'None'
+  endif
+
+  if sigsegv_recovery != 'None' and \
+     cxx.run(sigsegv_test.format('HAVE_SIGSEGV_SKIP_INSTRUCTION'),
+       name: 'sigsegv_skip_instruction',
+       include_directories: inc_dir).returncode() == 0
+    config_h.set('HAVE_SIGSEGV_SKIP_INSTRUCTION', 1)
+    can_vosf = true
+  else
+    can_vosf = false
+  endif
+
+elif host_system == 'darwin'
+  message('Using Mach SIGSEGV recovery')
   can_vosf = true
+  config_h.set('HAVE_MACH_EXCEPTIONS', 1)
+  config_h.set('HAVE_SIGSEGV_SKIP_INSTRUCTION', 1)
+else
+  message('Cross-compiling, assuming siginfo SIGSEGV recovery')
+  can_vosf = true
+  config_h.set('HAVE_SIGINFO_T', 1)
+  config_h.set('HAVE_SIGSEGV_SKIP_INSTRUCTION', 1)
 endif
 
 if get_option('vosf') and can_vosf
