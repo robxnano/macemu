@@ -98,7 +98,7 @@ endif
 if host_system == 'windows'
   deps += [cxx.find_library('iphlpapi'), cxx.find_library('ws2_32')]
 elif host_system == 'sunos'
-  deps += [dependency('x11'), cxx.find_library('nsl'), cxx.find_library('socket')]
+  deps += [cxx.find_library('nsl'), cxx.find_library('socket')]
 endif
 
 headers = [

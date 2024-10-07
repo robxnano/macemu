@@ -142,7 +142,11 @@ void EtherInit(void)
 		setsockopt(udp_socket, SOL_SOCKET, SO_NONBLOCK, &on, sizeof(on));
 #else
 		setsockopt(udp_socket, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+#ifdef USE_FIONBIO
 		ioctl(udp_socket, FIONBIO, &on);
+#else
+		fcntl(udp_socket, F_SETFL, fcntl(udp_socket, F_GETFL) | O_NONBLOCK);
+#endif
 #endif
 
 		// Start thread for packet reception
