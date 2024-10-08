@@ -90,6 +90,11 @@ else
   ]
   if host_system == 'linux'
     src += 'Unix/Linux/scsi_linux.cpp'
+  elif host_system == 'darwin'
+    src += [
+      'dummy/scsi_dummy.cpp',
+      'MacOSX/sys_darwin.cpp',
+    ]
   else
     src += 'dummy/scsi_dummy.cpp'
   endif
@@ -98,9 +103,7 @@ endif
 if enable_gtk
   if gtk.version().version_compare('>= 3.0')
     gnome = import('gnome')
-    if cxx.has_supported_link_argument('-rdynamic')
-      add_project_link_arguments('-rdynamic', language: ['c', 'cpp'])
-    endif
+    link_args += cxx.get_supported_link_arguments('-rdynamic')
     ui_xml = files(
       'Unix/ui/help-overlay.ui',
       'Unix/ui/menu.ui',
@@ -161,16 +164,15 @@ if have_sdl
     'SDL/video_sdl2.cpp',
     'SDL/video_sdl3.cpp',
     'SDL/audio_sdl.cpp',
+    'SDL/audio_sdl3.cpp',
   ]
+  if host_system == 'darwin'
+    src += 'MacOSX/utils_macosx.mm'
+  endif
   if host_system != 'windows'
     src += 'dummy/clip_dummy.cpp'
   endif
   keycodes = 'SDL/keycodes'
-elif host_system == 'darwin'
-  src += [
-    #TODO: Finish this
-  ]
-  keycodes = 'MacOSX/keycodes'
 else # X11 on Unix
   src += [
     'Unix/video_x.cpp',
@@ -317,6 +319,7 @@ if host_system == 'windows'
       dependencies: deps,
       c_args: args,
       cpp_args: args,
+      link_args: link_args,
       include_directories: inc_dirs,
       install: true)
   endif
@@ -328,6 +331,7 @@ executable('SheepShaver', src,
   dependencies: emu_deps,
   c_args: args,
   cpp_args: args,
+  link_args: link_args,
   include_directories: inc_dirs,
   install: true)
 

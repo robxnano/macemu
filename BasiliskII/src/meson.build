@@ -117,6 +117,11 @@ else
   ]
   if host_system == 'linux'
     src += 'Unix/Linux/scsi_linux.cpp'
+  elif host_system == 'darwin'
+    src += [
+      'dummy/scsi_dummy.cpp',
+      'MacOSX/sys_darwin.cpp',
+    ]
   else
     src += 'dummy/scsi_dummy.cpp'
   endif
@@ -166,9 +171,7 @@ src += [cpudefs, comptbl_h, compstbl]
 if enable_gtk
   if gtk.version().version_compare('>= 3.0')
     gnome = import('gnome')
-    if cxx.has_link_argument('-rdynamic')
-      link_args += '-rdynamic'
-    endif
+    link_args += cxx.get_supported_link_arguments('-rdynamic')
     ui_xml = files(
       'Unix/ui/help-overlay.ui',
       'Unix/ui/menu.ui',
@@ -230,16 +233,33 @@ if have_sdl
     'SDL/video_sdl2.cpp',
     'SDL/video_sdl3.cpp',
     'SDL/audio_sdl.cpp',
+    'SDL/audio_sdl3.cpp',
   ]
+  if host_system == 'darwin'
+    src += 'MacOSX/utils_macosx.mm'
+  endif
   if host_system != 'windows'
     src += 'dummy/clip_dummy.cpp'
   endif
   keycodes = 'SDL/keycodes'
-elif host_system == 'darwin'
+elif host_system == 'darwin' and get_option('macos_gui')
   src += [
-    #TODO: Finish this
+    'MacOSX/audio_macosx.cpp',
+    'MacOSX/AudioBackEnd.cpp',
+    'MacOSX/AudioDevice.cpp',
+    'MacOSX/MacOSX_sound_if.cpp',
+    'MacOSX/Controller.mm',
+    'MacOSX/Emulator.mm',
+    'MacOSX/EmulatorView.mm',
+    'MacOSX/PrefsEditor.mm',
+    'MacOSX/NNThread.mm',
+    'MacOSX/misc_macosx.mm',
+    'MacOSX/clip_macosx.cpp',
+    'MacOSX/main_macosx.mm',
+    'MacOSX/prefs_macosx.cpp',
+    'MacOSX/video_macosx.mm',
   ]
-  keycodes = 'MacOSX/keycodes'
+  keycodes = 'MacOSX/BasiliskII_keycodes'
 else # X11 on Unix
   src += [
     'Unix/video_x.cpp',

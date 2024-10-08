@@ -1,4 +1,5 @@
 option('gtk', type: 'combo', choices: ['auto', 'enabled', 'disabled', '2', '3'], value: 'auto', description: 'Build GTK launcher')
+option('macos_gui', type: 'boolean', value: false, description: 'Use macOS native GUI (broken on current macOS)')
 option('sdl', type: 'combo', choices: ['auto', 'enabled', 'disabled', '2', '3'], value: 'auto', description: 'Use SDL for audio/video')
 option('bincue', type: 'feature', value: 'auto', description: 'BIN/CUE support')
 option('slirp', type: 'boolean', value: true, description: 'Use slirp for networking')
