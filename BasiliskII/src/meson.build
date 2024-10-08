@@ -11,10 +11,18 @@ else
   args += '-DFPU_IEEE'
 endif
 
+inc_dirs = ['include', uae_path, 'CrossPlatform']
+build_inc_dirs = inc_dirs
+inc_dirs += host_system == 'windows' ? 'Windows' : 'Unix'
+build_inc_dirs += build_system == 'windows' ? 'Windows' : 'Unix'
+if host_system == 'darwin'
+  inc_dirs += 'MacOSX'
+endif
+
 if host_machine.cpu_family() == 'x86_64'
-  host_args += ['-DX86_64_ASSEMBLY', '-DUNALIGNED_PROFITABLE', '-DOPTIMIZED_FLAGS']
+  args += ['-DX86_64_ASSEMBLY', '-DUNALIGNED_PROFITABLE', '-DOPTIMIZED_FLAGS']
 elif host_machine.cpu_family() == 'x86'
-  host_args += ['-DX86_ASSEMBLY', '-DSAHF_SETO_PROFITABLE', '-DOPTIMIZED_FLAGS']
+  args += ['-DX86_ASSEMBLY', '-DSAHF_SETO_PROFITABLE', '-DOPTIMIZED_FLAGS']
 endif
 
 if build_machine.cpu_family() == 'x86_64'
@@ -22,11 +30,6 @@ if build_machine.cpu_family() == 'x86_64'
 elif build_machine.cpu_family() == 'x86'
   build_args += ['-DX86_ASSEMBLY', '-DSAHF_SETO_PROFITABLE', '-DOPTIMIZED_FLAGS']
 endif
-
-inc_dirs = ['include', uae_path, 'CrossPlatform']
-native_inc_dirs = inc_dirs
-inc_dirs += host_system == 'windows' ? 'Windows' : 'Unix'
-native_inc_dirs += build_system == 'windows' ? 'Windows' : 'Unix'
 
 ui_src = []
 src = [
@@ -122,7 +125,7 @@ endif
 build68k = executable('build68k', uae_path / 'build68k.c',
   native: true,
   c_args: build_args,
-  include_directories: native_inc_dirs)
+  include_directories: build_inc_dirs)
 
 build68k_cmd = build_system == 'windows' ? [build68k, '@INPUT@'] : build68k
 cpudefs = custom_target('cpudefs',
@@ -135,14 +138,16 @@ cpudefs = custom_target('cpudefs',
 gencpu = executable('gencpu', uae_path / 'gencpu.c', uae_path / 'readcpu.cpp', cpudefs,
   native: true,
   c_args: build_args,
+  cpp_args: build_args,
   build_by_default: true,
-  include_directories: native_inc_dirs)
+  include_directories: build_inc_dirs)
 
 gencomp = executable('gencomp', uae_path / 'compiler/gencomp.c', uae_path / 'readcpu.cpp', cpudefs,
   native: true,
   c_args: build_args,
+  cpp_args: build_args,
   build_by_default: true,
-  include_directories: native_inc_dirs)
+  include_directories: build_inc_dirs)
 
 cpuemu = custom_target('cpuemu',
   output: ['cpuemu.cpp', 'cpuemu_nf.cpp', 'cpustbl.cpp', 'cpustbl_nf.cpp', 'cputbl.h'],
@@ -158,9 +163,12 @@ comptbl_h = gencomp_out[2]
 
 src += [cpudefs, comptbl_h, compstbl]
 
-if use_gtk
+if enable_gtk
   if gtk.version().version_compare('>= 3.0')
     gnome = import('gnome')
+    if cxx.has_link_argument('-rdynamic')
+      link_args += '-rdynamic'
+    endif
     ui_xml = files(
       'Unix/ui/help-overlay.ui',
       'Unix/ui/menu.ui',
@@ -191,6 +199,7 @@ else
 endif
 
 if get_option('slirp')
+  args += cxx.get_supported_arguments('-fno-strict-aliasing')
   inc_dirs += 'slirp'
   src += [
     'slirp/bootp.c',
@@ -214,9 +223,10 @@ if get_option('slirp')
   ]
 endif
 
-if get_option('sdl') != 'disabled'
+exe_deps = deps
+if have_sdl
+  exe_deps += sdl
   src += [
-    'SDL/video_sdl.cpp',
     'SDL/video_sdl2.cpp',
     'SDL/video_sdl3.cpp',
     'SDL/audio_sdl.cpp',
@@ -263,13 +273,13 @@ endif
 cpuemus = []
 foreach i: range(1, 9)
   cpuemus += static_library(f'cpuemu@i@', cpuemu,
-    cpp_args: [args, host_args, f'-DPART_@i@'],
+    cpp_args: [args, f'-DPART_@i@'],
     include_directories: inc_dirs)
   cpuemus += static_library(f'cpuemu@i@_nf', cpuemu,
-    cpp_args: [args, host_args, f'-DPART_@i@', '-DNOFLAGS'],
+    cpp_args: [args, f'-DPART_@i@', '-DNOFLAGS'],
     include_directories: inc_dirs)
   cpuemus += static_library(f'compemu@i@', compemu,
-    cpp_args: [args, host_args, f'-DPART_@i@'],
+    cpp_args: [args, f'-DPART_@i@'],
     include_directories: inc_dirs)
 endforeach
 
@@ -277,9 +287,12 @@ if host_system == 'windows'
   windows = import('windows')
   src += windows.compile_resources('Windows/BasiliskII.rc')
   ui_src += windows.compile_resources('Windows/BasiliskIIGUI.rc')
-  if use_gtk
+  if enable_gtk
     executable('BasiliskIIGUI', ui_src,
       dependencies: deps,
+      c_args: args,
+      cpp_args: args,
+      link_args: link_args,
       include_directories: inc_dirs,
       install: true)
   endif
@@ -289,9 +302,10 @@ endif
 
 executable('BasiliskII',
   sources: src,
-  c_args: [args, host_args],
-  cpp_args: [args, host_args],
-  dependencies: [deps, sdl],
+  c_args: args,
+  cpp_args: args,
+  link_args: link_args,
+  dependencies: exe_deps,
   link_with: cpuemus,
   include_directories: inc_dirs,
   install: true)

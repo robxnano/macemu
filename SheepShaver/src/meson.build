@@ -1,10 +1,9 @@
 configure_file(output: 'config.h', configuration: config_h)
 
 inc_dirs = ['include', 'kpx_cpu', 'kpx_cpu/include', 'kpx_cpu/src', 'CrossPlatform']
-if host_system == 'windows'
-  inc_dirs += 'Windows'
-else
-  inc_dirs += 'Unix'
+inc_dirs += host_system == 'windows' ? 'Windows' : 'Unix'
+if host_system == 'darwin'
+  inc_dirs += 'MacOSX'
 endif
 
 ui_src = []
@@ -96,9 +95,12 @@ else
   endif
 endif
 
-if use_gtk
+if enable_gtk
   if gtk.version().version_compare('>= 3.0')
     gnome = import('gnome')
+    if cxx.has_supported_link_argument('-rdynamic')
+      add_project_link_arguments('-rdynamic', language: ['c', 'cpp'])
+    endif
     ui_xml = files(
       'Unix/ui/help-overlay.ui',
       'Unix/ui/menu.ui',
@@ -129,7 +131,7 @@ endif
 
 if get_option('slirp') or host_system == 'windows'
   inc_dirs += 'slirp'
-  add_project_arguments('-fno-strict-aliasing', language: 'c')
+  args += cxx.get_supported_arguments('-fno-strict-aliasing')
   src += [
     'slirp/bootp.c',
     'slirp/ip_output.c',
@@ -152,10 +154,12 @@ if get_option('slirp') or host_system == 'windows'
   ]
 endif
 
-if get_option('sdl') != 'disabled'
+emu_deps = deps
+if have_sdl
+  emu_deps += sdl
   src += [
-    'SDL/video_sdl.cpp',
     'SDL/video_sdl2.cpp',
+    'SDL/video_sdl3.cpp',
     'SDL/audio_sdl.cpp',
   ]
   if host_system != 'windows'
@@ -183,7 +187,7 @@ endif
 if not host_machine.cpu_family().startswith('ppc')
   if use_dyngen == 'precompiled'
     if host_machine.cpu_family().startswith('x86')
-      add_project_arguments('-fomit-frame-pointer', language: ['c', 'cpp'])
+      args += cxx.get_supported_arguments('-fomit-frame-pointer')
     endif
     if host_system == 'windows'
       inc_dirs += 'Windows/cygwin_precompiled_dyngen'
@@ -202,6 +206,7 @@ if not host_machine.cpu_family().startswith('ppc')
     ]
     dyngen_src = ['kpx_cpu/src/cpu/jit/dyngen.c', 'kpx_cpu/src/cpu/jit/cxxdemangle.cpp']
     dyngen = executable('dyngen', dyngen_src,
+      native: true,
       include_directories: inc_dirs,
       c_args: dyngen_args,
       cpp_args: dyngen_args,
@@ -307,9 +312,11 @@ if host_system == 'windows'
   windows = import('windows')
   src += windows.compile_resources('Windows/SheepShaver.rc')
   ui_src += windows.compile_resources('Windows/SheepShaverGUI.rc')
-  if use_gtk
+  if enable_gtk
     executable('SheepShaverGUI', ui_src,
       dependencies: deps,
+      c_args: args,
+      cpp_args: args,
       include_directories: inc_dirs,
       install: true)
   endif
@@ -318,7 +325,9 @@ else
 endif
 
 executable('SheepShaver', src,
-  dependencies: [deps, sdl],
+  dependencies: emu_deps,
+  c_args: args,
+  cpp_args: args,
   include_directories: inc_dirs,
   install: true)
 
