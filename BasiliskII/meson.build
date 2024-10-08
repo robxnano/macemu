@@ -15,11 +15,11 @@ config_h.set_quoted('APP_ID', app_id)
 config_h.set_quoted('PACKAGE_URL', package_url)
 config_h.set_quoted('PACKAGE_BUGREPORT', package_bugreport)
 args = ['-DHAVE_CONFIG_H=1'] # compile flags for the final executables
-link_args = [] # linker flags for the final executables
-build_args = [] # compile flags for the build executables
+link_args = []               # linker flags for the final executables
+build_args = []              # compile flags for the build executables
 deps = []
 
-if host_system not in ['windows', 'darwin']
+if host_system != 'windows'
   data_dir = get_option('datadir') / 'SheepShaver'
   args += f'-DDATADIR="@data_dir@"'
 endif
@@ -27,7 +27,7 @@ endif
 enable_gtk = false
 if host_system == 'windows' and get_option('gtk') == 'auto'
   want_gtk = '2'
-elif host_system == 'darwin'
+elif host_system == 'darwin' and get_option('gtk') == 'auto'
   want_gtk = 'disabled'
 else
   want_gtk = get_option('gtk')
@@ -46,21 +46,27 @@ if want_gtk != 'disabled'
 endif
 
 have_sdl = false
-if get_option('sdl') != 'disabled'
+if get_option('sdl') != 'disabled' or host_system == 'windows'
   config_h.set('USE_SDL', 1)
   config_h.set('USE_SDL_AUDIO', 1)
   config_h.set('USE_SDL_VIDEO', 1)
   if get_option('sdl') != '2'
-    sdl = dependency('sdl3', version: '>= 3.0', required: get_option('sdl') == '3')
+    sdl = dependency('sdl3', version: '>= 3.0', required: host_system != 'darwin' and get_option('sdl') == '3')
+    if not sdl.found() and host_system == 'darwin'
+      sdl = dependency('SDL3', required: get_option('sdl') == '3', method: 'extraframework')
+    endif
     if sdl.found()
       have_sdl = true
     endif
   endif
   if not have_sdl
-    sdl = dependency('sdl2', version: '>= 2.0.5')
+    sdl = dependency('sdl2', version: '>= 2.0.5', required: host_system != 'darwin')
+    if not sdl.found()
+      sdl = dependency('SDL2', method: 'extraframework')
+    endif
+    have_sdl = true
   endif
-  have_sdl = true
-elif host_system not in ['windows', 'darwin']
+elif
   deps += [dependency('x11'), dependency('xext')]
 endif
 
@@ -133,6 +139,9 @@ endif
 
 if host_system == 'windows'
   deps += [cxx.find_library('iphlpapi'), cxx.find_library('ws2_32')]
+elif host_system == 'darwin'
+  add_languages('objc', 'objcpp', native: false)
+  deps += dependency('appleframeworks', modules: ['AppKit', 'IOKit', 'CoreFoundation', 'Metal'])
 elif host_system == 'sunos'
   deps += [cxx.find_library('nsl'), cxx.find_library('socket')]
 endif
@@ -189,11 +198,13 @@ if cxx.has_type('loff_t', prefix: '#include <sys/types.h>')
   config_h.set('HAVE_LOFF_T', 1)
 endif
 
-functions = ['strdup', 'strerror', 'strlcpy', 'cfmakeraw', 'nanosleep',
+functions = ['strdup', 'strerror', 'strlcpy', 'cfmakeraw', 'timer_create',
   'sigaction', 'signal', 'mmap', 'mprotect', 'munmap', 'vm_allocate',
-  'vm_deallocate', 'vm_protect', 'exp2f', 'log2f', 'exp2', 'log2', 'floorf',
-  'roundf', 'ceilf', 'truncf', 'floor', 'round', 'ceil', 'trunc', 'poll',
-  'inet_aton', 'mach_task_self', 'task_self']
+  'vm_deallocate', 'vm_protect', 'poll', 'inet_aton', 'mach_task_self',
+  'task_self', '_getpty', 'openpty', 'vhangup', 'isnanl', 'isinfl', 'logl',
+  'log10l', 'expl', 'powl', 'fabsl', 'sqrtl', 'sinl', 'cosl', 'tanl', 'sinhl',
+  'coshl', 'tanhl', 'asinl', 'acosl', 'atanl', 'asinhl', 'acoshl', 'atanhl',
+  'floorl', 'ceill']
 functions += pthread_functions
 
 foreach f: functions
@@ -206,6 +217,17 @@ if config_h.get('HAVE_MMAP', 0) == 1 and \
    config_h.get('HAVE_MPROTECT', 0) == 1 and \
    config_h.get('HAVE_MUNMAP', 0) == 1
   config_h.set('HAVE_MMAP_VM', 1)
+endif
+
+if config_h.get('HAVE_VM_ALLOCATE', 0) == 1 and \
+   config_h.get('HAVE_VM_DEALLOCATE', 0) == 1 and \
+   config_h.get('HAVE_VM_PROTECT', 0) == 1
+  config_h.set('HAVE_MACH_VM', 1)
+endif
+
+if host_system == 'darwin' and host_machine.cpu() == 'x86_64'
+  link_args += ['-Wl,-no_pie', '-pagezero_size', '0x2000']
+  config_h.set('PAGEZERO_HACK', 1)
 endif
 
 if host_system == 'windows'
@@ -272,8 +294,10 @@ else
   config_h.set('HAVE_SIGSEGV_SKIP_INSTRUCTION', 1)
 endif
 
-if get_option('vosf') and can_vosf
-  config_h.set('ENABLE_VOSF', 1)
+if can_vosf
+  if get_option('vosf') and host_system != 'darwin'
+    config_h.set('ENABLE_VOSF', 1)
+  endif
   if get_option('addressing') == 'real'
     args += '-DREAL_ADDRESSING'
   elif get_option('addressing') == 'direct'
@@ -281,9 +305,10 @@ if get_option('vosf') and can_vosf
   endif
 endif
 
-config_h.set('HAVE_SIGNAL_SA_RESTORER',
-  cxx.has_member('struct sigaction', 'sa_restorer',
-    prefix: '#include <signal.h>'))
+if cxx.has_member('struct sigaction', 'sa_restorer',
+     prefix: '#include <signal.h>')
+  config_h.set('HAVE_SIGNAL_SA_RESTORER', 1)
+endif
 
 config_h.set('HOST_FLOAT_FORMAT', 'IEEE_FLOAT_FORMAT')
 if host_machine.endian() == 'big'

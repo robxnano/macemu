@@ -3,7 +3,7 @@ configure_file(output: 'config.h', configuration: config_h)
 inc_dirs = ['include', 'kpx_cpu', 'kpx_cpu/include', 'kpx_cpu/src', 'CrossPlatform']
 inc_dirs += host_system == 'windows' ? 'Windows' : 'Unix'
 if host_system == 'darwin'
-  inc_dirs += 'MacOSX'
+  inc_dirs += ['MacOSX', 'MacOSX/Launcher']
 endif
 
 ui_src = []
@@ -34,11 +34,11 @@ src = [
   'CrossPlatform/sigsegv.cpp',
   'CrossPlatform/video_blit.cpp',
   'CrossPlatform/vm_alloc.cpp',
-  'dummy/prefs_dummy.cpp',
 ]
 
 if host_system == 'windows'
   src += [
+    'dummy/prefs_dummy.cpp',
     'dummy/prefs_editor_dummy.cpp',
     'dummy/scsi_dummy.cpp',
     'Windows/clip_windows.cpp',
@@ -75,7 +75,6 @@ else
     'Unix/about_window_unix.cpp',
     'Unix/disk_sparsebundle.cpp',
     'Unix/ether_unix.cpp',
-    'Unix/extfs_unix.cpp',
     'Unix/main_unix.cpp',
     'Unix/prefs_unix.cpp',
     'Unix/rpc_unix.cpp',
@@ -93,14 +92,27 @@ else
   else
     src += 'dummy/scsi_dummy.cpp'
   endif
+  if host_system == 'darwin'
+    src += [
+      'dummy/scsi_dummy.cpp',
+      'MacOSX/extfs_macosx.cpp',
+      'MacOSX/prefs_macosx.mm',
+      'MacOSX/Launcher/VMSettingsController.mm',
+      'MacOSX/Launcher/DiskType.m',
+      'MacOSX/sys_darwin.cpp',
+    ]
+  else
+    src += [
+      'Unix/extfs_unix.cpp',
+      'dummy/prefs_dummy.cpp',
+    ]
+  endif
 endif
 
 if enable_gtk
   if gtk.version().version_compare('>= 3.0')
     gnome = import('gnome')
-    if cxx.has_supported_link_argument('-rdynamic')
-      add_project_link_arguments('-rdynamic', language: ['c', 'cpp'])
-    endif
+    link_args += cxx.get_supported_link_arguments('-rdynamic')
     ui_xml = files(
       'Unix/ui/help-overlay.ui',
       'Unix/ui/menu.ui',
@@ -161,16 +173,15 @@ if have_sdl
     'SDL/video_sdl2.cpp',
     'SDL/video_sdl3.cpp',
     'SDL/audio_sdl.cpp',
+    'SDL/audio_sdl3.cpp',
   ]
+  if host_system == 'darwin'
+    src += 'MacOSX/utils_macosx.mm'
+  endif
   if host_system != 'windows'
     src += 'dummy/clip_dummy.cpp'
   endif
   keycodes = 'SDL/keycodes'
-elif host_system == 'darwin'
-  src += [
-    #TODO: Finish this
-  ]
-  keycodes = 'MacOSX/keycodes'
 else # X11 on Unix
   src += [
     'Unix/video_x.cpp',
@@ -317,6 +328,7 @@ if host_system == 'windows'
       dependencies: deps,
       c_args: args,
       cpp_args: args,
+      link_args: link_args,
       include_directories: inc_dirs,
       install: true)
   endif
@@ -328,6 +340,7 @@ executable('SheepShaver', src,
   dependencies: emu_deps,
   c_args: args,
   cpp_args: args,
+  link_args: link_args,
   include_directories: inc_dirs,
   install: true)
 
