@@ -13,60 +13,59 @@ config_h = configuration_data()
 config_h.set_quoted('APP_ID', app_id)
 config_h.set_quoted('PACKAGE_URL', package_url)
 config_h.set_quoted('PACKAGE_BUGREPORT', package_bugreport)
+args = ['-DHAVE_CONFIG_H=1']
 deps = []
-
-add_project_arguments('-DHAVE_CONFIG_H=1', language: ['c', 'cpp'])
 
 if host_system not in ['windows', 'darwin']
   data_dir = get_option('datadir') / 'SheepShaver'
-  add_project_arguments(f'-DDATADIR="@data_dir@"', language: ['c', 'cpp'])
+  args += f'-DDATADIR="@data_dir@"'
 endif
 
-if get_option('gtk') in ['2', '3'] or \
-   (get_option('gtk') == 'auto' and host_system != 'darwin')
-  config_h.set('ENABLE_GTK', 1)
-  use_gtk = true
-  if get_option('gtk') == '3' or \
-     (get_option('gtk') == 'auto' and host_system != 'windows')
-    gtk = dependency('gtk+-3.0', version: '>= 3.22.0', required: get_option('gtk') == '3')
-    if gtk.found()
-      add_project_link_arguments('-rdynamic', language: ['c', 'cpp'])
-    else
-      gtk = dependency('gtk+-2.0', version: '>= 2.24.0')
-    endif
-  else
+enable_gtk = false
+if get_option('gtk') == 'auto' and host_system == 'windows'
+  want_gtk = '2'
+elif host_system == 'darwin'
+  want_gtk = 'disabled'
+else
+  want_gtk = get_option('gtk')
+endif
+
+if want_gtk != 'disabled'
+  if want_gtk != '2'
+    gtk = dependency('gtk+-3.0', version: '>= 3.22.0', required: want_gtk == '3')
+  endif
+  if want_gtk == '2' or not gtk.found()
     gtk = dependency('gtk+-2.0', version: '>= 2.24.0')
   endif
   deps += gtk
-else
-  use_gtk = false
+  enable_gtk = true
+  config_h.set('ENABLE_GTK', 1)
 endif
 
-sdl = []
+have_sdl = false
 if get_option('sdl') != 'disabled'
   config_h.set('USE_SDL', 1)
   config_h.set('USE_SDL_AUDIO', 1)
   config_h.set('USE_SDL_VIDEO', 1)
-  if get_option('sdl') in ['3', 'auto']
+  if get_option('sdl') != '2'
     sdl = dependency('sdl3', version: '>= 3.0', required: get_option('sdl') == '3')
-    if not sdl.found()
-      sdl = dependency('sdl2', version: '>= 2.0.5')
+    if sdl.found()
+      have_sdl = true
     endif
-  else
+  endif
+  if not have_sdl
     sdl = dependency('sdl2', version: '>= 2.0.5')
   endif
+  have_sdl = true
 elif host_system not in ['windows', 'darwin']
   deps += [dependency('x11'), dependency('xext')]
 endif
 
-
-if not (get_option('bincue').disabled())
-  if get_option('sdl') == 'disabled'
-    if get_option('bincue').enabled() and host_system != 'darwin'
-      error('BIN/CUE support requires SDL.')
-    endif
-  else
-    add_project_arguments('-DBINCUE', language: ['c', 'cpp'])
+if not get_option('bincue').disabled()
+  if have_sdl or host_system == 'darwin'
+    args += '-DBINCUE'
+  elif get_option('bincue').enabled()
+    error('BIN/CUE support requires SDL.')
   endif
 endif
 
@@ -74,9 +73,45 @@ if get_option('slirp')
   config_h.set('HAVE_SLIRP', 1)
 endif
 
-if get_option('jit').enabled() or \
-   get_option('jit').auto() and not host_machine.cpu_family().startswith('ppc')
-  add_project_arguments('-DUSE_JIT=1', language: ['c', 'cpp'])
+if get_option('jit') and not host_machine.cpu_family().startswith('ppc')
+  args += '-DUSE_JIT=1'
+endif
+
+enable_mon = false
+if get_option('mon')
+  foreach l: ['ncurses', 'termcap', 'termlib', 'terminfo', 'Hcurses', 'curses']
+    termlib = cxx.find_library(l, required: false)
+    if termlib.found() and cxx.has_function('tgetent', dependencies: termlib)
+      deps += termlib
+      config_h.set('HAVE_LIB' + l.to_upper(), 1)
+      break
+    endif
+  endforeach
+
+  readline = cxx.find_library('readline', required: false)
+  if readline.found()
+    deps += readline
+    config_h.set('HAVE_LIBREADLINE', 1)
+    foreach h: ['readline.h', 'history.h', 'readline/readline.h', 'readline/history.h']
+      if cxx.has_header(h)
+        config_h.set('HAVE_' + h.underscorify().to_upper(), 1)
+      endif
+    endforeach
+  endif
+  if termlib.found() and readline.found()
+      config_h.set('ENABLE_MON', 1)
+      enable_mon = true
+  else
+    warning('Terminal libraries not found, disabling mon.')
+  endif
+endif
+
+libvhd = cxx.find_library('vhd', required: get_option('libvhd'))
+if libvhd.found()
+  libuuid = cxx.find_library('uuid', required: get_option('libvhd'))
+  if libuuid.found()
+    deps += [libvhd, libuuid]
+  endif
 endif
 
 if host_machine.cpu_family().startswith('ppc')
@@ -176,46 +211,9 @@ foreach f: functions
   endif
 endforeach
 
-enable_mon = false
-if get_option('mon')
-  foreach l: ['ncurses', 'termcap', 'termlib', 'terminfo', 'Hcurses', 'curses']
-    termlib = cxx.find_library(l, required: false)
-    if termlib.found() and cxx.has_function('tgetent', dependencies: termlib)
-      deps += termlib
-      config_h.set('HAVE_LIB' + l.to_upper(), 1)
-      break
-    endif
-  endforeach
-
-  readline = cxx.find_library('readline', required: false)
-  if readline.found()
-    deps += readline
-    config_h.set('HAVE_LIBREADLINE', 1)
-    foreach h: ['readline.h', 'history.h', 'readline/readline.h', 'readline/history.h']
-      if cxx.has_header(h)
-        config_h.set('HAVE_' + h.underscorify().to_upper(), 1)
-      endif
-    endforeach
-  endif
-  if termlib.found() and readline.found()
-      config_h.set('ENABLE_MON', 1)
-      enable_mon = true
-  else
-    warning('Terminal libraries not found, disabling mon.')
-  endif
-endif
-
-libvhd = cxx.find_library('vhd', required: get_option('libvhd'))
-if libvhd.found()
-  libuuid = cxx.find_library('uuid', required: get_option('libvhd'))
-  if libuuid.found()
-    deps += [libvhd, libuuid]
-  endif
-endif
-
-if config_h.get('HAVE_MMAP', 0) == 1 \
-   and config_h.get('HAVE_MPROTECT', 0) == 1 \
-   and config_h.get('HAVE_MUNMAP', 0) == 1
+if config_h.get('HAVE_MMAP', 0) == 1 and \
+   config_h.get('HAVE_MPROTECT', 0) == 1 and \
+   config_h.get('HAVE_MUNMAP', 0) == 1
   config_h.set('HAVE_MMAP_VM', 1)
 endif
 
@@ -292,7 +290,7 @@ config_h.set('HAVE_SIGNAL_SA_RESTORER',
     prefix: '#include <signal.h>'))
 
 if get_option('addressing') == 'direct'
-  add_project_arguments('-DNATMEM_OFFSET=' + get_option('offset'), language: ['c', 'cpp'])
+  args += '-DNATMEM_OFFSET=' + get_option('offset')
 endif
 
 use_dyngen = get_option('dyngen')
