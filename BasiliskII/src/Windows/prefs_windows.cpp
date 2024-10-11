@@ -1,7 +1,7 @@
 /*
  *  prefs_windows.cpp - Preferences handling, Windows specific stuff
  *
- *  Basilisk II (C) 1997-2008 Christian Bauer
+ *  Basilisk II, SheepShaver (C) 1997-2008 Christian Bauer
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,13 +24,16 @@
 #include <stdlib.h>
 
 #include <string>
-typedef std::basic_string<TCHAR> tstring;
+using std::string;
 
 #include "prefs.h"
 
 
 // Platform-specific preferences items
 prefs_desc platform_prefs_items[] = {
+#ifdef SHEEPSHAVER
+	{"ether", TYPE_STRING, false,          "device name of Mac ethernet adapter"},
+#endif
 	{"keycodes", TYPE_BOOLEAN, false,      "use keycodes rather than keysyms to decode keyboard"},
 	{"keycodefile", TYPE_STRING, false,    "path of keycode translation file"},
 	{"mousewheelmode", TYPE_INT32, false,  "mouse wheel support mode (0=page up/down, 1=cursor up/down)"},
@@ -55,15 +58,18 @@ prefs_desc platform_prefs_items[] = {
 #endif
 	{"reservewindowskey", TYPE_BOOLEAN, false,      "block Windows key from activating start menu"},
 
-
 	{NULL, TYPE_END, false, NULL} // End of list
 };
 
 
 // Prefs file name and path
-const TCHAR PREFS_FILE_NAME[] = TEXT("BasiliskII_prefs");
-tstring UserPrefsPath;
-static tstring prefs_path;
+#ifdef SHEEPSHAVER
+const char PREFS_FILE_NAME[] = "SheepShaver_prefs";
+#else
+const char PREFS_FILE_NAME[] = "BasiliskII_prefs";
+#endif
+string UserPrefsPath;
+static string prefs_path;
 
 
 /*
@@ -75,15 +81,16 @@ void LoadPrefs(const char *vmdir)
 	// Construct prefs path
 	if (UserPrefsPath.empty()) {
 		int pwd_len = GetCurrentDirectory(0, NULL);
-		prefs_path.resize(pwd_len);
-		pwd_len = GetCurrentDirectory(pwd_len, &prefs_path.front());
-		prefs_path[pwd_len] = TEXT('\\');
+		char *pwd = new char[pwd_len];
+		if (GetCurrentDirectory(pwd_len, pwd) == pwd_len - 1)
+			prefs_path = string(pwd) + '\\';
+		delete[] pwd;
 		prefs_path += PREFS_FILE_NAME;
 	} else
 		prefs_path = UserPrefsPath;
 
 	// Read preferences from settings file
-	FILE *f = _tfopen(prefs_path.c_str(), TEXT("r"));
+	FILE *f = fopen(prefs_path.c_str(), "r");
 	if (f != NULL) {
 
 		// Prefs file found, load settings
@@ -105,7 +112,7 @@ void LoadPrefs(const char *vmdir)
 void SavePrefs(void)
 {
 	FILE *f;
-	if ((f = _tfopen(prefs_path.c_str(), TEXT("w"))) != NULL) {
+	if ((f = fopen(prefs_path.c_str(), "w")) != NULL) {
 		SavePrefsToStream(f);
 		fclose(f);
 	}
@@ -119,6 +126,11 @@ void SavePrefs(void)
 
 void AddPlatformPrefsDefaults(void)
 {
+#ifdef SHEEPSHAVER
+	PrefsAddInt32("windowmodes", 3);
+	PrefsAddInt32("screenmodes", 0x3f);
+	PrefsReplaceBool("routerenabled", false);
+#endif
 	PrefsAddBool("keycodes", false);
 	PrefsReplaceBool("pollmedia", true);
 	PrefsReplaceBool("enableextfs", false);
