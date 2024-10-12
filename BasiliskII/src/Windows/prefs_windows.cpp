@@ -22,12 +22,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <shlobj.h>
 
 #include <string>
-using std::string;
 
 #include "prefs.h"
-
 
 // Platform-specific preferences items
 prefs_desc platform_prefs_items[] = {
@@ -64,42 +64,125 @@ prefs_desc platform_prefs_items[] = {
 
 // Prefs file name and path
 #ifdef SHEEPSHAVER
-const char PREFS_FILE_NAME[] = "SheepShaver_prefs";
+const wchar_t PREFS_FILE_NAME[] = L"SheepShaver_prefs";
+const wchar_t APPDATA_SUBDIR[] = L"SheepShaver";
 #else
-const char PREFS_FILE_NAME[] = "BasiliskII_prefs";
+const wchar_t PREFS_FILE_NAME[] = L"BasiliskII_prefs";
+const wchar_t APPDATA_SUBDIR[] = L"BasiliskII";
 #endif
-string UserPrefsPath;
-static string prefs_path;
 
+std::wstring UserPrefsPath;
+
+const std::wstring& get_appdata_dir(void)
+{
+	static std::wstring dir;
+	if (dir.empty())
+	{
+		PWSTR wdir = nullptr;
+		if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0,
+		                                   nullptr, &wdir)))
+		{
+			dir = std::wstring(wdir);
+		}
+		CoTaskMemFree(wdir);
+	}
+	return dir;
+}
+
+static std::wstring get_dir(std::wstring& path)
+{
+	size_t pos = path.find_last_of(L'\\');
+	if (pos == 0)
+		return L""; // file is in root folder
+	if (pos == std::wstring::npos)
+		return L"."; // file is in current folder
+	return path.substr(0, pos);
+}
+
+static bool is_dir(const std::wstring& path)
+{
+	struct _stat info;
+	if (_wstat(path.c_str(), &info) != 0){
+		return false;
+	}
+	return (info.st_mode & S_IFDIR) != 0;
+}
+
+static bool create_directories(const std::wstring& path)
+{
+	if (_wmkdir(path.c_str()) == 0)
+		return true;
+
+	switch (errno)
+	{
+		case ENOENT:
+			{
+				size_t pos = path.find_last_of('\\');
+				if (pos == std::wstring::npos)
+					return false;
+				if (!create_directories(path.substr(0, pos)))
+					return false;
+			}
+			return 0 == _wmkdir(path.c_str());
+
+		case EEXIST:
+			return is_dir(path);
+		default:
+			return false;
+	}
+}
 
 /*
- *  Load preferences from settings file
+ *  Look for prefs file in the following locations (in order of priority):
+ *  1. From .\BasiliskII_prefs if it exists
+ *  2. From %APPDATA%\BasiliskII\BasiliskII_prefs if it exists
+ *  3. Create a new prefs file at %APPDATA%\BasiliskII\prefs
+ *  (or the equivalent paths for SheepShaver)
  */
 
 void LoadPrefs(const char *vmdir)
 {
+	std::wstring prefs_path;
 	// Construct prefs path
 	if (UserPrefsPath.empty()) {
-		int pwd_len = GetCurrentDirectory(0, NULL);
-		char *pwd = new char[pwd_len];
-		if (GetCurrentDirectory(pwd_len, pwd) == pwd_len - 1)
-			prefs_path = string(pwd) + '\\';
+		uint32_t pwd_len = GetCurrentDirectoryW(0, NULL);
+		wchar_t *pwd = new wchar_t[pwd_len];
+		if (GetCurrentDirectoryW(pwd_len, pwd) == pwd_len - 1)
+			prefs_path = std::wstring(pwd) + L'\\';
 		delete[] pwd;
+
 		prefs_path += PREFS_FILE_NAME;
 	} else
 		prefs_path = UserPrefsPath;
 
 	// Read preferences from settings file
-	FILE *f = fopen(prefs_path.c_str(), "r");
+	FILE *f = _wfopen(prefs_path.c_str(), L"r");
 	if (f != NULL) {
 
+		wprintf(L"Using prefs file at %ls\n", prefs_path.c_str());
+		UserPrefsPath = prefs_path;
 		// Prefs file found, load settings
 		LoadPrefsFromStream(f);
 		fclose(f);
+		return;
+
+	}
+
+	prefs_path = get_appdata_dir() + L'\\' + APPDATA_SUBDIR + L'\\' + PREFS_FILE_NAME;
+	f = _wfopen(prefs_path.c_str(), L"r");
+	if (f != NULL) {
+
+		wprintf(L"Using prefs file at %ls\n", prefs_path.c_str());
+		// Prefs file found, load settings
+		UserPrefsPath = prefs_path;
+		LoadPrefsFromStream(f);
+		fclose(f);
+		return;
 
 	} else {
-
 		// No prefs file, save defaults
+		wprintf(L"No prefs file found, creating new one at %ls\n", prefs_path.c_str());
+		UserPrefsPath = prefs_path;
 		SavePrefs();
 	}
 }
@@ -112,7 +195,12 @@ void LoadPrefs(const char *vmdir)
 void SavePrefs(void)
 {
 	FILE *f;
-	if ((f = fopen(prefs_path.c_str(), "w")) != NULL) {
+	std::wstring prefs_dir = get_dir(UserPrefsPath);
+	if (!prefs_dir.empty() && !is_dir(prefs_dir))
+	{
+		create_directories(prefs_dir);
+	}
+	if ((f = _wfopen(UserPrefsPath.c_str(), L"w")) != NULL) {
 		SavePrefsToStream(f);
 		fclose(f);
 	}

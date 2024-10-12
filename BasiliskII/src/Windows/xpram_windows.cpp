@@ -21,19 +21,28 @@
 #include "sysdeps.h"
 
 #include <string>
-typedef std::basic_string<TCHAR> tstring;
 
 #include "xpram.h"
 
 
 // XPRAM file name and path
-#if POWERPC_ROM
-const TCHAR XPRAM_FILE_NAME[] = TEXT("SheepShaver_nvram.dat");
+#if SHEEPSHAVER
+const wchar_t XPRAM_FILE_NAME[] = L"SheepShaver_nvram.dat";
 #else
-const TCHAR XPRAM_FILE_NAME[] = TEXT("BasiliskII_xpram.dat");
+const wchar_t XPRAM_FILE_NAME[] = L"BasiliskII_xpram.dat";
 #endif
-static tstring xpram_path;
+extern std::wstring UserPrefsPath; // From prefs_windows.cpp
+static std::wstring xpram_path;
 
+static std::wstring get_dir(std::wstring& path)
+{
+	size_t pos = path.find_last_of(L'\\');
+	if (pos == 0)
+		return L""; // file is in root folder
+	if (pos == std::wstring::npos)
+		return L"."; // file is in current folder
+	return path.substr(0, pos);
+}
 
 /*
  *  Construct XPRAM path
@@ -42,12 +51,7 @@ static tstring xpram_path;
 static void build_xpram_path(void)
 {
 	xpram_path.clear();
-	int pwd_len = GetCurrentDirectory(0, NULL);
-	TCHAR *pwd = new TCHAR[pwd_len];
-	if (GetCurrentDirectory(pwd_len, pwd) == pwd_len - 1)
-		xpram_path = tstring(pwd) + TEXT('\\');
-	delete[] pwd;
-	xpram_path += XPRAM_FILE_NAME;
+	xpram_path = get_dir(UserPrefsPath) + L'\\' += XPRAM_FILE_NAME;
 }
 
 
@@ -61,7 +65,7 @@ void LoadXPRAM(const char *vmdir)
 	build_xpram_path();
 
 	// Load XPRAM from settings file
-	HANDLE fh = CreateFile(xpram_path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	HANDLE fh = CreateFileW(xpram_path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (fh != INVALID_HANDLE_VALUE) {
 		DWORD bytesRead;
 		ReadFile(fh, XPRAM, XPRAM_SIZE, &bytesRead, NULL);
@@ -76,7 +80,7 @@ void LoadXPRAM(const char *vmdir)
 
 void SaveXPRAM(void)
 {
-	HANDLE fh = CreateFile(xpram_path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	HANDLE fh = CreateFileW(xpram_path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	if (fh != INVALID_HANDLE_VALUE) {
 		DWORD bytesWritten;
 		WriteFile(fh, XPRAM, XPRAM_SIZE, &bytesWritten, NULL);
@@ -95,5 +99,5 @@ void ZapPRAM(void)
 	build_xpram_path();
 
 	// Delete file
-	DeleteFile(xpram_path.c_str());
+	DeleteFileW(xpram_path.c_str());
 }
