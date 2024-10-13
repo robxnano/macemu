@@ -48,57 +48,59 @@ prefs_desc platform_prefs_items[] = {
 };
 
 
-#ifdef __linux__
-
-
 // Standard file names and paths
 #ifdef SHEEPSHAVER
-static const char PREFS_FILE_NAME[] = "/.sheepshaver_prefs";
-static const char XDG_PREFS_FILE_NAME[] = "/prefs";
-static const char XPRAM_FILE_NAME[] = "/.sheepshaver_nvram";
-static const char XDG_XPRAM_FILE_NAME[] = "/nvram";
-static const char XDG_CONFIG_SUBDIR[] = "/SheepShaver";
+static const char PREFS_FILE_NAME[] = ".sheepshaver_prefs";
+static const char XDG_PREFS_FILE_NAME[] = "prefs";
+static const char XPRAM_FILE_NAME[] = ".sheepshaver_nvram";
+static const char XDG_XPRAM_FILE_NAME[] = "nvram";
+static const char XDG_CONFIG_SUBDIR[] = "SheepShaver";
 #else
-static const char PREFS_FILE_NAME[] = "/.basilisk_ii_prefs";
-static const char XDG_PREFS_FILE_NAME[] = "/prefs";
-static const char XPRAM_FILE_NAME[] = "/.basilisk_ii_xpram";
-static const char XDG_XPRAM_FILE_NAME[] = "/xpram";
-static const char XDG_CONFIG_SUBDIR[] = "/BasiliskII";
+static const char PREFS_FILE_NAME[] = ".basilisk_ii_prefs";
+static const char XDG_PREFS_FILE_NAME[] = "prefs";
+static const char XPRAM_FILE_NAME[] = ".basilisk_ii_xpram";
+static const char XDG_XPRAM_FILE_NAME[] = "xpram";
+static const char XDG_CONFIG_SUBDIR[] = "BasiliskII";
 #endif
 
 // Prefs file name and path
 string UserPrefsPath;
-static string home_dir;
-static string xdg_config_dir;
-static string prefs_name;
 extern string xpram_name;
 
-static string get_xdg_config_dir(void)
+static const string& get_home_dir(void)
 {
-	char *env;
-	if (env = getenv("XDG_CONFIG_HOME"))
-		return string(env) + XDG_CONFIG_SUBDIR;
-	if (env = getenv("HOME"))
-		return string(env) + "/.config" + XDG_CONFIG_SUBDIR;
-	return "";
+	static string home_dir;
+	if (home_dir.empty()) {
+		char *env;
+		if ((env = getenv("HOME")))
+			home_dir = string(env);
+		else
+			home_dir = "."; // last resort, use the current directory
+	}
+	return home_dir;
 }
 
-static string get_home_dir(void)
+static const string& get_xdg_config_dir(void)
 {
-	char *env;
-	if(env = getenv("HOME"))
-		return string(env);
-	return "."; // last resort, use the current directory
+	static string xdg_config_dir;
+	if (xdg_config_dir.empty()) {
+		char *env;
+		if ((env = getenv("XDG_CONFIG_HOME")))
+			xdg_config_dir = string(env) + '/' + XDG_CONFIG_SUBDIR;
+		else
+			xdg_config_dir = get_home_dir() + "/.config/" + XDG_CONFIG_SUBDIR;
+	}
+	return xdg_config_dir;
 }
 
-static string get_dir(string *path)
+static string get_dir(const string& path)
 {
-	int pos = path->find_last_of('/');
+	size_t pos = path.find_last_of('/');
 	if (pos == 0)
 		return ""; // file is in root folder
 	if (pos == std::string::npos)
 		return "."; // file is in current folder
-	return path->substr(0, pos);
+	return path.substr(0, pos);
 }
 
 static void exit_if_dir(const string& path)
@@ -109,7 +111,7 @@ static void exit_if_dir(const string& path)
 	}
 	if ((info.st_mode & S_IFDIR) != 0)
 	{
-		fprintf(stderr, "ERROR: Cannot open %s (Is a directory)\n", prefs_name.c_str());
+		fprintf(stderr, "ERROR: Cannot open %s (Is a directory)\n", path.c_str());
 		exit(1);
 	}
 }
@@ -122,7 +124,7 @@ static bool load_prefs_file(const string& path, bool exit_on_failure)
 	{
 		LoadPrefsFromStream(prefs);
 		fclose(prefs);
-		printf("Using prefs file at %s\n", prefs_name.c_str());
+		printf("Using prefs file at %s\n", path.c_str());
 		return true;
 	}
 	else if (exit_on_failure)
@@ -149,50 +151,40 @@ static bool load_prefs_file(const string& path, bool exit_on_failure)
 
 void LoadPrefs(const char* vmdir)
 {
-	home_dir = get_home_dir();
-	xdg_config_dir = get_xdg_config_dir();
-
 	// vmdir was specified on the command line
 	if (vmdir)
 	{
-		prefs_name = string(vmdir) + XDG_PREFS_FILE_NAME;
-		xpram_name = string(vmdir) + XDG_XPRAM_FILE_NAME;
-		if (load_prefs_file(prefs_name, true))
+		UserPrefsPath = string(vmdir) + '/' + XDG_PREFS_FILE_NAME;
+		xpram_name = string(vmdir) + '/' + XDG_XPRAM_FILE_NAME;
+		if (load_prefs_file(UserPrefsPath, true))
 			return;
 	}
 
 	// --config was specified
 	if (!UserPrefsPath.empty())
 	{
-		prefs_name = UserPrefsPath;
-		xpram_name = get_dir(&prefs_name) + XPRAM_FILE_NAME;
-		if (load_prefs_file(prefs_name, true))
+		xpram_name = get_dir(UserPrefsPath) + '/' + XPRAM_FILE_NAME;
+		if (load_prefs_file(UserPrefsPath, true))
 			return;
 	}
 
 	// Load .basilisk_ii_prefs from $HOME if it exists
-	if (!home_dir.empty())
-	{
-		prefs_name = home_dir + PREFS_FILE_NAME;
-		xpram_name = home_dir + XPRAM_FILE_NAME;
-		if (load_prefs_file(prefs_name, false))
-			return;
-	}
+	UserPrefsPath = get_home_dir() + '/' + PREFS_FILE_NAME;
+	xpram_name = get_home_dir() + '/' + XPRAM_FILE_NAME;
+	if (load_prefs_file(UserPrefsPath, false))
+		return;
 
 	// If no other prefs file exists, try the $XDG_CONFIG_HOME directory
-	if (!xdg_config_dir.empty())
-	{
-		prefs_name = xdg_config_dir + XDG_PREFS_FILE_NAME;
-		xpram_name = xdg_config_dir + XDG_XPRAM_FILE_NAME;
-		if (load_prefs_file(prefs_name, false))
-			return;
-	}
+	UserPrefsPath = get_xdg_config_dir() + '/' + XDG_PREFS_FILE_NAME;
+	xpram_name = get_xdg_config_dir() + '/' + XDG_XPRAM_FILE_NAME;
+	if (load_prefs_file(UserPrefsPath, false))
+		return;
 
 	// No prefs file, save defaults in $XDG_CONFIG_HOME directory
-//#ifdef __linux__
+#ifdef __linux__
 	PrefsAddString("cdrom", "/dev/cdrom");
-//#endif
-	printf("No prefs file found, creating new one at %s\n", prefs_name.c_str());
+#endif
+	printf("No prefs file found, creating new one at %s\n", UserPrefsPath.c_str());
 	SavePrefs();
 }
 
@@ -214,13 +206,13 @@ static bool create_directories(const string& path, mode_t mode)
 	{
 		case ENOENT:
 			{
-				int pos = path.find_last_of('/');
+				size_t pos = path.find_last_of('/');
 				if (pos == std::string::npos)
 					return false;
-				if (!create_directories(path.substr(0,pos),mode))
+				if (!create_directories(path.substr(0, pos), mode))
 					return false;
 			}
-			return 0 == mkdir(path.c_str(),mode);
+			return 0 == mkdir(path.c_str(), mode);
 
 		case EEXIST:
 			return is_dir(path);
@@ -237,12 +229,12 @@ static bool create_directories(const string& path, mode_t mode)
 void SavePrefs(void)
 {
 	FILE *f;
-	string prefs_dir = get_dir(&prefs_name);
+	string prefs_dir = get_dir(UserPrefsPath);
 	if (!prefs_dir.empty() && !is_dir(prefs_dir))
 	{
 		create_directories(prefs_dir, 0700);
 	}
-	if ((f = fopen(prefs_name.c_str(), "w")) != NULL)
+	if ((f = fopen(UserPrefsPath.c_str(), "w")) != NULL)
 	{
 		SavePrefsToStream(f);
 		fclose(f);
@@ -250,84 +242,9 @@ void SavePrefs(void)
 	else
 	{
 		fprintf(stderr, "WARNING: Unable to save %s (%s)\n",
-		        prefs_name.c_str(), strerror(errno));
+		        UserPrefsPath.c_str(), strerror(errno));
 	}
 }
-
-
-#else	// __linux__
-
-
-// Prefs file name and path
-#ifdef SHEEPSHAVER
-static const char PREFS_FILE_NAME[] = ".sheepshaver_prefs";
-#else
-static const char PREFS_FILE_NAME[] = ".basilisk_ii_prefs";
-#endif
-string UserPrefsPath;
-static string prefs_path;
-
-
-/*
- *  Load preferences from settings file
- */
-
-void LoadPrefs(const char *vmdir)
-{
-	if (vmdir) {
-		prefs_path = string(vmdir) + '/' + string("prefs");
-		FILE *prefs = fopen(prefs_path.c_str(), "r");
-		if (!prefs) {
-			printf("No file at %s found.\n", prefs_path.c_str());
-			exit(1);
-		}
-		LoadPrefsFromStream(prefs);
-		fclose(prefs);
-		return;
-	}
-
-	// Construct prefs path
-	if (UserPrefsPath.empty()) {
-		char *home = getenv("HOME");
-		if (home)
-			prefs_path = string(home) + '/';
-		prefs_path += PREFS_FILE_NAME;
-	} else
-		prefs_path = UserPrefsPath;
-
-	// Read preferences from settings file
-	FILE *f = fopen(prefs_path.c_str(), "r");
-	if (f != NULL) {
-
-		// Prefs file found, load settings
-		LoadPrefsFromStream(f);
-		fclose(f);
-
-	} else {
-//#ifdef __linux__
-//		PrefsAddString("cdrom", "/dev/cdrom");
-//#endif
-		// No prefs file, save defaults
-		SavePrefs();
-	}
-}
-
-
-/*
- *  Save preferences to settings file
- */
-
-void SavePrefs(void)
-{
-	FILE *f;
-	if ((f = fopen(prefs_path.c_str(), "w")) != NULL) {
-		SavePrefsToStream(f);
-		fclose(f);
-	}
-}
-
-
-#endif	// __linux__
 
 
 /*
