@@ -718,6 +718,12 @@ irix*)
   ;;
 esac
 
+if [[ "$ac_cv_framework_CoreFoundation" = "yes" ]]; then
+  PREFSSRC="$PREFSSRC ../MacOSX/prefs_macos.mm"
+else
+  PREFSSRC="$PREFSSRC prefs_unix.cpp"
+fi
+
 dnl BINCUE
 AS_IF([test  "x$with_bincue" = "xyes" ], [have_bincue=yes], [have_bincue=no])
 AS_IF([test  "x$have_bincue" = "xyes" ], [

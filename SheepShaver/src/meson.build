@@ -76,7 +76,6 @@ else
     'Unix/disk_sparsebundle.cpp',
     'Unix/ether_unix.cpp',
     'Unix/main_unix.cpp',
-    'Unix/prefs_unix.cpp',
     'Unix/rpc_unix.cpp',
     'Unix/serial_unix.cpp',
     'Unix/sshpty.c',
@@ -96,6 +95,7 @@ else
     src += [
       'dummy/scsi_dummy.cpp',
       'MacOSX/extfs_macosx.cpp',
+      'MacOSX/prefs_macos.mm',
       'MacOSX/prefs_macosx.mm',
       'MacOSX/Launcher/VMSettingsController.mm',
       'MacOSX/Launcher/DiskType.m',
@@ -104,6 +104,7 @@ else
   else
     src += [
       'Unix/extfs_unix.cpp',
+      'Unix/prefs_unix.cpp',
       'dummy/prefs_dummy.cpp',
     ]
   endif

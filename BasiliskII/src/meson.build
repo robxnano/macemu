@@ -104,7 +104,6 @@ else
     'Unix/ether_unix.cpp',
     'Unix/extfs_unix.cpp',
     'Unix/main_unix.cpp',
-    'Unix/prefs_unix.cpp',
     'Unix/rpc_unix.cpp',
     'Unix/serial_unix.cpp',
     'Unix/sshpty.c',
@@ -117,13 +116,16 @@ else
   ]
   if host_system == 'linux'
     src += 'Unix/Linux/scsi_linux.cpp'
-  elif host_system == 'darwin'
+  else
+    src += 'dummy/scsi_dummy.cpp'
+  endif
+  if host_system == 'darwin'
     src += [
-      'dummy/scsi_dummy.cpp',
+      'MacOSX/prefs_macos.mm',
       'MacOSX/sys_darwin.cpp',
     ]
   else
-    src += 'dummy/scsi_dummy.cpp'
+    src += 'Unix/prefs_unix.cpp'
   endif
 endif
 

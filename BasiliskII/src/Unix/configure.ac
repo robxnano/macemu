@@ -874,6 +874,8 @@ if [[ "x$WANT_MACOSX_GUI" = "xyes" ]]; then
   EXTRASYSSRCS="$EXTRASYSSRCS ../MacOSX/prefs_macosx.cpp"
 
   VIDEOSRCS="../MacOSX/video_macosx.mm"
+elif [[ "$ac_cv_framework_CoreFoundation" = "yes" ]]; then
+  EXTRASYSSRCS="$EXTRASYSSRCS main_unix.cpp ../MacOSX/prefs_macos.mm"
 else
   EXTRASYSSRCS="$EXTRASYSSRCS main_unix.cpp prefs_unix.cpp"
 fi
